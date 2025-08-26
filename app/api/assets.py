@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 from datetime import date
 
 from app.core.database import get_db
-from app.core.dependencies import verify_login
+from app.core.dependencies import login_required
 from app.core.models import Assets # DB 모델 import
 from .schemas import AssetCreate
 from fastapi.templating import Jinja2Templates

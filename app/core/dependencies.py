@@ -1,14 +1,13 @@
-from fastapi import Request, HTTPException, status, Depends
-from fastapi.templating import Jinja2Templates
+from fastapi import Request
+from fastapi.responses import RedirectResponse
 
-# templates는 이 파일 내에서만 사용되므로 별도로 정의합니다.
-templates = Jinja2Templates(directory="templates")
-
-async def verify_login(request: Request):
-    if not request.session.get("logged_in", False):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Not authenticated",
-            headers={"WWW-Authenticate": "Basic"},
-        )
+def login_required(request: Request):
+    """
+    사용자가 로그인했는지 세션을 확인합니다.
+    로그인하지 않은 경우, 로그인 페이지로 리디렉션합니다.
+    """
+    if not request.session.get("logged_in"):
+        # 원래 접속하려던 URL을 세션에 저장합니다.
+        request.session["redirect_after_login"] = str(request.url)
+        return RedirectResponse(url="/login", status_code=303)
     return True

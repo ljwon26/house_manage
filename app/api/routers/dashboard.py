@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 from app.core.models import Income, Expense, Assets, Task
 # get_db 의존성을 정확한 경로에서 가져와야 합니다.
 from app.core.database import get_db
+from app.core.dependencies import login_required
 
 # Jinja2 템플릿 설정을 가져옵니다.
 templates = Jinja2Templates(directory="templates")
@@ -14,7 +15,8 @@ templates = Jinja2Templates(directory="templates")
 # 라우터 객체를 생성합니다.
 router = APIRouter()
 
-@router.get("/", response_class=HTMLResponse)
+#@router.get("/", response_class=HTMLResponse)
+@router.get("/dashboard", response_class=HTMLResponse, dependencies=[Depends(login_required)])
 def dashboard(request: Request, db: Session = Depends(get_db)):
     """
     대시보드 페이지를 렌더링합니다.
