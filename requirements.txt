@@ -8,3 +8,4 @@ apscheduler
 python-dateutil
 passlib[bcrypt]
 python-jose[cryptography]
+itsdangerous
