@@ -64,7 +64,7 @@ app.include_router(monthly_ledger.router, tags=["MonthlyLedger"])
 # --- 메인 페이지 라우트 ---
 @app.get("/", response_class=HTMLResponse)
 def home(request: Request):
-    return RedirectResponse(url="/dashboard", status_code=303)
+    return RedirectResponse(url="/login", status_code=303)
 
 # --- 이메일 전송 기능 ---
 async def send_email(subject, recipient, body):
