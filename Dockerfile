@@ -17,4 +17,4 @@ EXPOSE 8000
 # 6. 컨테이너가 시작될 때 실행할 명령어
 # uvicorn을 이용해 main.py의 app을 실행합니다.
 # --host 0.0.0.0 옵션은 외부에서 접속 가능하도록 합니다.
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "5000"]
