@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>월별 생활비 가계부</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js 라이브러리 추가 -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
+        .progress-bar-fill { transition: width 0.5s ease-in-out; }
+    </style>
+</head>
+<body class="p-4 sm:p-8">
+    <div class="max-w-4xl mx-auto">
+        <!-- 페이지 헤더 -->
+        <header class="flex justify-between items-center mb-6">
+            <a href="/" class="text-gray-600 hover:text-indigo-600 font-semibold transition-colors duration-200 flex items-center">
+                <i class="fas fa-arrow-left mr-2"></i> 대시보드
+            </a>
+            <h1 class="text-2xl sm:text-3xl font-bold text-gray-800">생활비 가계부</h1>
+            <div class="w-24"></div> <!-- 균형용 div -->
+        </header>
+
+        <!-- 월 선택 및 예산 현황 -->
+        <section class="bg-white p-6 rounded-2xl shadow-lg mb-8">
+            <div class="flex justify-between items-center mb-4">
+                <a href="?month={{ prev_month }}" class="p-2 rounded-full hover:bg-gray-100 transition">
+                    <i class="fas fa-chevron-left text-gray-600"></i>
+                </a>
+                <h2 class="text-2xl font-bold text-indigo-600">{{ current_month_display }}</h2>
+                <a href="?month={{ next_month }}" class="p-2 rounded-full hover:bg-gray-100 transition">
+                    <i class="fas fa-chevron-right text-gray-600"></i>
+                </a>
+            </div>
+            
+            <!-- 예산 정보 -->
+            <div>
+                <div class="flex justify-between text-gray-600 mb-1">
+                    <span>사용 금액: {{ "{:,.0f}".format(total_spent) }}원</span>
+                    <span>남은 금액: <span class="font-bold text-indigo-600">{{ "{:,.0f}".format(remaining_budget) }}원</span></span>
+                </div>
+                <!-- 진행률 바 -->
+                <div class="w-full bg-gray-200 rounded-full h-4">
+                    <div class="bg-indigo-600 h-4 rounded-full progress-bar-fill" style="width: {{ usage_percentage }}%;"></div>
+                </div>
+                <div class="text-right text-sm text-gray-500 mt-1">
+                    이번 달 예산: {{ "{:,.0f}".format(budget) }}원
+                </div>
+            </div>
+        </section>
+
+        <div class="grid grid-cols-1 lg:grid-cols-5 gap-8">
+            <!-- 지출 추가 폼 -->
+            <aside class="lg:col-span-2 bg-white p-6 rounded-2xl shadow-lg h-fit">
+                <h3 class="text-xl font-bold text-gray-800 mb-4">지출 내역 추가</h3>
+                <form action="/add_ledger_expense" method="post" class="space-y-4">
+                    <div>
+                        <label for="expense_date" class="block text-sm font-medium text-gray-700">날짜</label>
+                        <input type="date" id="expense_date" name="expense_date" class="mt-1 w-full p-2 border border-gray-300 rounded-lg" required>
+                    </div>
+                    <div>
+                        <label for="category" class="block text-sm font-medium text-gray-700">카테고리</label>
+                        <select id="category" name="category" class="mt-1 w-full p-2 border border-gray-300 rounded-lg" required>
+                            <option value="식비">식비</option>
+                            <option value="생활용품">생활용품</option>
+                            <option value="교통비">교통비</option>
+                            <option value="문화/여가">문화/여가</option>
+                            <option value="기타">기타</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="item" class="block text-sm font-medium text-gray-700">항목</label>
+                        <input type="text" id="item" name="item" class="mt-1 w-full p-2 border border-gray-300 rounded-lg" placeholder="예: 스타벅스 커피" required>
+                    </div>
+                    <div>
+                        <label for="amount" class="block text-sm font-medium text-gray-700">금액</label>
+                        <input type="number" id="amount" name="amount" class="mt-1 w-full p-2 border border-gray-300 rounded-lg" placeholder="예: 9000" required>
+                    </div>
+                    <button type="submit" class="w-full bg-indigo-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-indigo-700 transition">
+                        <i class="fas fa-save mr-2"></i> 저장하기
+                    </button>
+                </form>
+            </aside>
+
+            <!-- 지출 내역 목록 -->
+            <main class="lg:col-span-3 bg-white p-6 rounded-2xl shadow-lg">
+                <h3 class="text-xl font-bold text-gray-800 mb-4">이번 달 지출 내역</h3>
+                <div class="space-y-2">
+                    {% for expense in expenses %}
+                    <div class="flex items-center p-3 border-b hover:bg-gray-50 rounded-lg">
+                        <div class="text-center w-16">
+                            <p class="font-bold">{{ expense.expense_date.strftime('%m/%d') }}</p>
+                            <p class="text-xs text-gray-500">{{ ['월', '화', '수', '목', '금', '토', '일'][expense.expense_date.weekday()] }}</p>
+                        </div>
+                        <div class="ml-4 flex-grow">
+                            <p class="font-semibold text-gray-800">{{ expense.item }}</p>
+                            <p class="text-sm text-gray-500">{{ expense.category }}</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="font-semibold text-red-600">- {{ "{:,.0f}".format(expense.amount) }} 원</p>
+                        </div>
+                    </div>
+                    {% else %}
+                    <p class="text-gray-500 text-center py-8">이번 달 지출 내역이 없습니다.</p>
+                    {% endfor %}
+                </div>
+            </main>
+        </div>
+
+        <!-- 카테고리별 지출 비율 그래프 -->
+        <section class="mt-8 bg-white p-6 rounded-2xl shadow-lg">
+            <h3 class="text-xl font-bold text-gray-800 mb-4">카테고리별 지출 비율</h3>
+            <div class="max-w-md mx-auto">
+                <canvas id="categoryPieChart"></canvas>
+            </div>
+        </section>
+
+    </div>
+
+    <script>
+        // 오늘 날짜를 '지출 추가' 폼의 날짜 입력 필드에 기본값으로 설정
+        document.getElementById('expense_date').valueAsDate = new Date();
+
+        // Chart.js 그래프 생성 스크립트
+        document.addEventListener('DOMContentLoaded', () => {
+            // 서버에서 전달받은 차트 데이터를 파싱
+            const chartRawData = JSON.parse('{{ chart_data | safe }}');
+            const labels = Object.keys(chartRawData);
+            const data = Object.values(chartRawData);
+            
+            // 지출 내역이 있을 때만 그래프를 그림
+            if (data.length > 0) {
+                const ctx = document.getElementById('categoryPieChart').getContext('2d');
+                
+                // 데이터 라벨 플러그인 등록
+                Chart.register(ChartDataLabels);
+
+                new Chart(ctx, {
+                    type: 'pie',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            data: data,
+                            backgroundColor: [
+                                'rgba(255, 99, 132, 0.8)',
+                                'rgba(54, 162, 235, 0.8)',
+                                'rgba(255, 206, 86, 0.8)',
+                                'rgba(75, 192, 192, 0.8)',
+                                'rgba(153, 102, 255, 0.8)',
+                            ],
+                            borderColor: [
+                                'rgba(255, 255, 255, 1)',
+                            ],
+                            borderWidth: 2
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                            },
+                            // 그래프에 퍼센트 표시 설정
+                            datalabels: {
+                                formatter: (value, ctx) => {
+                                    const sum = ctx.chart.data.datasets[0].data.reduce((a, b) => a + b, 0);
+                                    const percentage = (value / sum * 100).toFixed(1) + '%';
+                                    return percentage;
+                                },
+                                color: '#fff',
+                                font: {
+                                    weight: 'bold'
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>
