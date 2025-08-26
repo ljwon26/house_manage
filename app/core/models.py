@@ -60,3 +60,10 @@ class LedgerExpense(Base):
     category = Column(String(50))
     item = Column(String(100))
     amount = Column(Float)
+    
+class MonthlyBudget(Base):
+    __tablename__ = "monthly_budgets"
+    id = Column(Integer, primary_key=True, index=True)
+    # "YYYY-MM" 형식으로 월 정보를 저장합니다. (예: "2025-09")
+    month = Column(String(7), unique=True, index=True) 
+    amount = Column(Float, nullable=False)
