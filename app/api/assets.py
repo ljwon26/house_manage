@@ -34,7 +34,7 @@ def create_asset(
     )
     db.add(new_asset)
     db.commit()
-    return RedirectResponse(url="/", status_code=303)
+    return RedirectResponse(url="/dashboard", status_code=303)
 
 @router.get("/edit_asset/{asset_id}", response_class=HTMLResponse)
 def edit_asset_form(request: Request, asset_id: int, db: Session = Depends(get_db), ):
@@ -71,7 +71,7 @@ def update_asset(
     asset.amount = amount
     asset.notes = notes
     db.commit()
-    return RedirectResponse(url="/", status_code=303)
+    return RedirectResponse(url="/dashboard", status_code=303)
 
 
 @router.post("/delete_asset", response_class=RedirectResponse)
@@ -80,5 +80,5 @@ def delete_asset(asset_id: int = Form(...), db: Session = Depends(get_db), ):
     if asset:
         db.delete(asset)
         db.commit()
-    return RedirectResponse(url="/", status_code=303)
+    return RedirectResponse(url="/dashboard", status_code=303)
 

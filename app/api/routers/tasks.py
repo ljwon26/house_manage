@@ -101,7 +101,7 @@ async def add_task(
     # 백그라운드에서 이메일 발송 작업을 실행
     background_tasks.add_task(send_email, to_email=email, subject=subject, body=html_body)
 
-    return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
+    return RedirectResponse(url="/dashboard", status_code=status.HTTP_303_SEE_OTHER)
 
 # ===================================================================
 # 대시보드에서 알림을 삭제하는 함수
@@ -118,7 +118,7 @@ def delete_task_from_dashboard(
     db.delete(task_to_delete)
     db.commit()
     
-    return RedirectResponse(url="/", status_code=status.HTTP_303_SEE_OTHER)
+    return RedirectResponse(url="/dashboard", status_code=status.HTTP_303_SEE_OTHER)
 
 
 # 아래는 기존의 다른 task 관련 코드들입니다 (수정 없음).
