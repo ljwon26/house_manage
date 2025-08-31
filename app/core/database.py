@@ -4,7 +4,7 @@ from sqlalchemy.orm import sessionmaker, DeclarativeBase
 
 # --- 데이터베이스 연결 설정 ---
 # 'DATABASE_URL' 환경 변수가 설정되어 있지 않으면 기본 SQLite 데이터베이스를 사용합니다.
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./sql_app.db")
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./data/sql_app.db")
 
 # SQLite는 기본적으로 동일 스레드에서만 접근이 가능하므로,
 # `check_same_thread=False` 옵션을 추가하여 멀티스레드 환경에서도 사용할 수 있게 합니다.
