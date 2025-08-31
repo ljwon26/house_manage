@@ -40,6 +40,8 @@
             display: none;
         }
     </style>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
 </head>
 <body>
     <div class="container">
@@ -47,8 +49,24 @@
             &larr; 대시보드로 돌아가기
         </a>
 
+        <section class="mb-8 bg-white p-6 rounded-lg shadow-md">
+            <h2 class="text-xl font-bold mb-4 text-gray-800">총 수입 대비 카테고리별 지출 비율</h2>
+            <div class="flex flex-col md:flex-row items-center gap-8">
+                <div class="w-full md:w-1/2 flex flex-col items-center">
+                    <div class="relative max-w-md mx-auto h-[300px] w-full">
+                        <canvas id="totalExpenseChart"></canvas>
+                        <p id="totalExpenseChart-no-data" class="text-center text-gray-500 py-10" style="display:none;">지출 데이터가 없습니다.</p>
+                    </div>
+                </div>
+                <div class="w-full md:w-1/2 text-gray-800">
+                    <p class="mb-2">총 수입: <span class="font-bold text-green-600">{{ "{:,.0f}".format(total_income) }}</span>원</p>
+                    <p class="mb-2">총 지출: <span class="font-bold text-red-600">{{ "{:,.0f}".format(total_expense) }}</span>원</p>
+                    <p>남은 금액: <span class="font-bold text-indigo-600">{{ "{:,.0f}".format(balance) }}</span>원</p>
+                </div>
+            </div>
+        </section>
+        
         <div class="space-y-6">
-            <!-- 지출 추가 섹션 -->
             <div class="bg-white p-6 rounded-lg shadow-md">
                 <div class="flex justify-between items-center cursor-pointer" id="toggle-expense">
                     <h2 class="text-xl font-bold text-gray-800">지출 추가</h2>
@@ -97,7 +115,6 @@
                 </form>
             </div>
 
-            <!-- 수입 추가 섹션 -->
             <div class="bg-white p-6 rounded-lg shadow-md">
                 <div class="flex justify-between items-center cursor-pointer" id="toggle-income">
                     <h2 class="text-xl font-bold text-gray-800">수입 추가</h2>
@@ -144,7 +161,6 @@
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ income.income_type }}</td>
                             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ "{:,.0f}".format(income.amount) }} 원</td>
                             <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                <!-- ▼▼▼ [수정된 부분] '수정' 링크를 여기에 추가했습니다. ▼▼▼ -->
                                 <a href="/edit_income/{{ income.id }}" class="text-indigo-600 hover:text-indigo-900 mr-4">수정</a>
                                 <form action="/delete_income" method="post" class="inline" onsubmit="return confirm('정말로 이 항목을 삭제하시겠습니까?');">
                                     <input type="hidden" name="income_id" value="{{ income.id }}">
@@ -198,25 +214,134 @@
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            const toggleExpense = document.getElementById('toggle-expense');
-            const expenseForm = document.getElementById('expense-form');
-            const expenseToggleIcon = document.getElementById('expense-toggle-icon');
+    document.addEventListener('DOMContentLoaded', function () {
+        // ▼▼▼ [수정] 차트 렌더링 스크립트 ▼▼▼
+        Chart.register(ChartDataLabels); // 데이터 레이블 플러그인 등록
 
-            const toggleIncome = document.getElementById('toggle-income');
-            const incomeForm = document.getElementById('income-form');
-            const incomeToggleIcon = document.getElementById('income-toggle-icon');
+        // Flask/Jinja2 템플릿으로부터 데이터 가져오기
+        const expenseCategoryTotals = JSON.parse('{{ expense_category_totals | tojson | safe }}');
+        const totalIncome = {{ total_income | default(0) }};
 
-            toggleExpense.addEventListener('click', () => {
-                expenseForm.classList.toggle('hidden-form');
-                expenseToggleIcon.textContent = expenseForm.classList.contains('hidden-form') ? '+' : '-';
-            });
+        // 파이 차트 생성 함수
+        function createPieChart(canvasId, data, totalIncomeValue) {
+            const chartElement = document.getElementById(canvasId);
+            const noDataElement = document.getElementById(`${canvasId}-no-data`);
+            
+            // 데이터가 있는 경우에만 차트 생성
+            if (data && Object.keys(data).length > 0) {
+                chartElement.style.display = 'block';
+                noDataElement.style.display = 'none';
 
-            toggleIncome.addEventListener('click', () => {
-                incomeForm.classList.toggle('hidden-form');
-                incomeToggleIcon.textContent = incomeForm.classList.contains('hidden-form') ? '+' : '-';
-            });
+                const totalExpense = Object.values(data).reduce((sum, value) => sum + value, 0);
+
+                // [핵심 로직]
+                // 총 수입이 0보다 크면 '총 수입'을, 그렇지 않으면 '총 지출'을 퍼센트 계산의 기준으로 사용합니다.
+                // 이렇게 함으로써 '총 수입 대비 지출 비율'을 정확히 표시할 수 있습니다.
+                const calculationBase = totalIncomeValue > 0 ? totalIncomeValue : totalExpense;
+
+                const chartConfig = {
+                    type: 'pie',
+                    data: {
+                        labels: Object.keys(data),
+                        datasets: [{
+                            data: Object.values(data),
+                            backgroundColor: [
+                                '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40',
+                                '#AEC6CF', '#77DD77', '#FDFD96', '#FF6961', '#B39EB5', '#FFC0CB'
+                            ],
+                            hoverOffset: 4
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'right', // 범례 위치
+                                labels: {
+                                    font: { size: 14 },
+                                    // 범례 텍스트를 '카테고리: 비율%' 형태로 생성
+                                    generateLabels: function(chart) {
+                                        const data = chart.data;
+                                        if (data.labels.length && data.datasets.length) {
+                                            return data.labels.map(function(label, i) {
+                                                const value = data.datasets[0].data[i];
+                                                const percentage = calculationBase > 0 ? ((value / calculationBase) * 100).toFixed(1) : 0;
+                                                return {
+                                                    text: `${label}: ${percentage}%`,
+                                                    fillStyle: data.datasets[0].backgroundColor[i],
+                                                };
+                                            });
+                                        }
+                                        return [];
+                                    }
+                                }
+                            },
+                            // 차트 조각에 직접 퍼센트 표시
+                            datalabels: {
+                                display: true,
+                                formatter: (value, ctx) => {
+                                    const percentage = (value / calculationBase * 100).toFixed(1) + '%';
+                                    return percentage;
+                                },
+                                color: '#000', // 텍스트 색상
+                                font: {
+                                    weight: 'bold',
+                                    size: 14
+                                }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    // 툴팁에 금액(원)과 비율(%) 함께 표시
+                                    label: function(context) {
+                                        const label = context.label || '';
+                                        const value = context.raw;
+                                        const percentage = (value / calculationBase * 100).toFixed(1);
+                                        const formattedValue = value.toLocaleString('ko-KR');
+                                        return `${label}: ${formattedValue}원 (${percentage}%)`;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                };
+
+                // 기존 차트가 있으면 파괴하고 새로 생성 (데이터 업데이트 시 필요)
+                if (window.expenseChartInstance) {
+                    window.expenseChartInstance.destroy();
+                }
+                window.expenseChartInstance = new Chart(chartElement.getContext('2d'), chartConfig);
+
+            } else {
+                // 데이터가 없으면 '데이터 없음' 메시지 표시
+                chartElement.style.display = 'none';
+                noDataElement.style.display = 'block';
+            }
+        }
+
+        // 페이지 로드 시 차트 생성
+        createPieChart('totalExpenseChart', expenseCategoryTotals, totalIncome);
+        // ▲▲▲ 여기까지 ▲▲▲
+        
+        // --- 폼 토글 스크립트 (기존과 동일) ---
+        const toggleExpense = document.getElementById('toggle-expense');
+        const expenseForm = document.getElementById('expense-form');
+        const expenseToggleIcon = document.getElementById('expense-toggle-icon');
+
+        const toggleIncome = document.getElementById('toggle-income');
+        const incomeForm = document.getElementById('income-form');
+        const incomeToggleIcon = document.getElementById('income-toggle-icon');
+
+        toggleExpense.addEventListener('click', () => {
+            expenseForm.classList.toggle('hidden-form');
+            expenseToggleIcon.textContent = expenseForm.classList.contains('hidden-form') ? '+' : '-';
         });
+
+        toggleIncome.addEventListener('click', () => {
+            incomeForm.classList.toggle('hidden-form');
+            incomeToggleIcon.textContent = incomeForm.classList.contains('hidden-form') ? '+' : '-';
+        });
+    });
     </script>
 </body>
 </html>

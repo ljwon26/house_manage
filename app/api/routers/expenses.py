@@ -4,6 +4,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from datetime import date
 from typing import Optional
+import json
 
 # 데이터베이스 및 모델을 정확한 경로에서 가져옵니다.
 from app.core.database import get_db
@@ -27,13 +28,23 @@ def get_expenses_page(request: Request, db: Session = Depends(get_db)):
     total_expense = sum(expense.amount for expense in expenses)
     balance = total_income - total_expense
 
+    # ▼▼▼ [수정] 모든 지출의 카테고리별 합계 계산 ▼▼▼
+    expense_category_totals = {}
+    for expense in expenses:
+        expense_category_totals[expense.category] = expense_category_totals.get(expense.category, 0) + expense.amount
+    # ▲▲▲ 여기까지 ▲▲▲
+    
     return templates.TemplateResponse("expenses.html", {
         "request": request,
         "incomes": incomes,
         "expenses": expenses,
         "total_income": total_income,
         "total_expense": total_expense,
-        "balance": balance
+        "balance": balance,
+        # ▼▼▼ [수정] 템플릿에 총 수입과 지출 차트 데이터 전달 ▼▼▼
+        "total_income": total_income,
+        "expense_category_totals": expense_category_totals
+        # ▲▲▲ 여기까지 ▲▲▲
     })
 
 @router.post("/add_income", response_class=RedirectResponse)
@@ -146,7 +157,6 @@ def update_expense(
     db.commit()
     return RedirectResponse(url="/expenses", status_code=status.HTTP_303_SEE_OTHER)
 
-# ▼▼▼ [수입 수정 기능] 이 부분이 추가되었습니다. ▼▼▼
 @router.get("/edit_income/{income_id}", response_class=HTMLResponse)
 def edit_income_form(request: Request, income_id: int, db: Session = Depends(get_db)):
     """
