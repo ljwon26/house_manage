@@ -1,0 +1,11 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    ports:
+      - "5000:5000"
+    volumes:
+      # 호스트 머신의 'data' 디렉토리를 컨테이너의 '/app' 디렉토리로 마운트
+      # sql_app.db 파일이 컨테이너 내 /app/sql_app.db에 생성되지만, 실제로는 호스트의 ./data/sql_app.db에 저장됩니다.
+      - ./data:/app
