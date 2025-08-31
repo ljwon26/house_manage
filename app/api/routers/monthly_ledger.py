@@ -83,7 +83,7 @@ def get_monthly_ledger(request: Request, db: Session = Depends(get_db), month: s
         "current_month_display": display_month_date.strftime("%Y년 %m월"),
         "prev_month": prev_month,
         "next_month": next_month,
-        "chart_data": json.dumps(category_totals)
+        "chart_data": category_totals
     })
 
 # ... (이하 add_ledger_expense, delete_ledger_expense, set_budget 함수는 기존과 동일)
