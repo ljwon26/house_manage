@@ -6,10 +6,12 @@ from typing import Optional
 import aiosmtplib
 from email.mime.text import MIMEText
 
+
 # 모델과 의존성을 정확한 경로에서 가져옵니다.
 from app.core.database import get_db
 from app.core.models import Task
 from fastapi.templating import Jinja2Templates
+
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
@@ -19,7 +21,8 @@ EMAIL_ADDRESS = "ljwon26@gmail.com"
 EMAIL_PASSWORD = "qxxq unfr sfcg eoep" # Gmail 앱 비밀번호
 
 async def send_email(to_email: str, subject: str, body: str):
-    msg = MIMEText(body, _subtype='html')
+    subtype = 'html' if '<' in body and '>' in body else 'plain'
+    msg = MIMEText(body, _subtype=subtype)
     msg['Subject'] = subject
     msg['From'] = EMAIL_ADDRESS
     msg['To'] = to_email
@@ -28,11 +31,11 @@ async def send_email(to_email: str, subject: str, body: str):
     SMTP_PORT = 587
 
     try:
-        # aiosmtplib.SMTP를 사용하여 비동기적으로 이메일 서버에 연결
+        #async with aiosmtplib.SMTP(hostname=SMTP_SERVER, port=SMTP_PORT, use_tls=True) as server:
         async with aiosmtplib.SMTP(hostname=SMTP_SERVER, port=SMTP_PORT, start_tls=True) as server:
             await server.login(EMAIL_ADDRESS, EMAIL_PASSWORD)
             await server.send_message(msg)
-            print(f"이메일 전송 성공: {subject} to {to_email}")
+            print(f"이메일 전송 성공: '{subject}' to {to_email}")
     except Exception as e:
         print(f"이메일 전송 실패: {e}")
 
