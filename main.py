@@ -1,5 +1,6 @@
 import os
 import json
+import pytz
 from urllib.parse import urlencode
 from datetime import date, timedelta, datetime
 from typing import List
@@ -25,6 +26,7 @@ from app.api import assets
 # ▼▼▼ [핵심] tasks.py에 있는 send_email 함수를 가져오는 이 부분은 그대로 둡니다. ▼▼▼
 from app.api.routers.tasks import send_email
 
+
 app = FastAPI()
 
 app.include_router(assets.router, tags=["Assets"])
@@ -45,7 +47,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
 # 스케줄러 설정
-scheduler = AsyncIOScheduler()
+scheduler = AsyncIOScheduler(timezone=pytz.timezone('Asia/Seoul'))
 scheduler.start()
 
 # --- 데이터베이스 테이블 생성 ---
