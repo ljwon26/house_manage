@@ -49,9 +49,13 @@
                     <span>사용 금액: {{ "{:,.0f}".format(total_spent) }}원</span>
                     <span>남은 금액: <span class="font-bold text-indigo-600">{{ "{:,.0f}".format(remaining_budget) }}원</span></span>
                 </div>
-                <div class="w-full bg-gray-200 rounded-full h-4">
-                    <div class="bg-indigo-600 h-4 rounded-full progress-bar-fill" style="width: {{ usage_percentage }}%;"></div>
+            <div class="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
+                {# usage_percentage가 100을 넘으면 배경색을 빨간색(bg-red-500)으로, 아니면 파란색(bg-indigo-600)으로 설정합니다. #}
+                <div class="{% if usage_percentage > 100 %}bg-red-500{% else %}bg-indigo-600{% endif %} h-4 rounded-full progress-bar-fill"
+                    {# 너비는 최대 100%를 넘지 않도록 설정합니다. #}
+                    style="width: {% if usage_percentage > 100 %}100{% else %}{{ usage_percentage }}{% endif %}%;">
                 </div>
+            </div>
 
                 <div class="text-right text-sm text-gray-500 mt-1 flex justify-end items-center">
                     <span>이번 달 예산: {{ "{:,.0f}".format(budget) }}원</span>
