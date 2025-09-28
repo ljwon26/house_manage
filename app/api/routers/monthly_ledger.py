@@ -1,20 +1,21 @@
 # app/api/routers/monthly_ledger.py
 import json
 from fastapi import APIRouter, Depends, Request, Form, HTTPException
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.models import LedgerExpense, MonthlyBudget
 from datetime import datetime, date, timedelta
 from dateutil.relativedelta import relativedelta
+import openpyxl
+from io import BytesIO
+from urllib.parse import quote
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
 
 DEFAULT_BUDGET = 700000
-
-# --- [추가] 주말을 피해서 날짜를 조정하는 함수 ---
 def adjust_date_for_weekend(target_date: date) -> date:
     """
     주어진 날짜가 토요일이면 금요일로, 일요일이면 금요일로 조정합니다.
@@ -29,7 +30,6 @@ def adjust_date_for_weekend(target_date: date) -> date:
     # 평일이면 그대로 반환
     else:
         return target_date
-# --- [추가 끝] ---
 
 
 @router.get("/monthly_ledger", response_class=HTMLResponse)
@@ -52,7 +52,21 @@ def get_monthly_ledger(request: Request, db: Session = Depends(get_db), month: s
     # 2. 주말 조정 함수를 적용하여 최종 시작일/종료일 확정
     start_date = adjust_date_for_weekend(initial_start_date)
     end_date = adjust_date_for_weekend(initial_end_date)
-    # --- [수정 끝] ---
+    
+    today = date.today()
+    if today.day > 24:
+        d_day_target = today.replace(day=25) + relativedelta(months=1)
+    else:
+        d_day_target = today.replace(day=25)
+    
+    # 보고 있는 페이지의 월과 D-Day 기준일의 월이 일치하는지 확인
+    if d_day_target.strftime("%Y-%m") == display_month_date.strftime("%Y-%m"):
+        days_left = (d_day_target - today).days
+        d_day_to_pass = days_left
+    else:
+        d_day_to_pass = None
+    
+
 
     display_month_str = display_month_date.strftime("%Y-%m")
     budget_record = db.query(MonthlyBudget).filter(MonthlyBudget.month == display_month_str).first()
@@ -83,10 +97,65 @@ def get_monthly_ledger(request: Request, db: Session = Depends(get_db), month: s
         "current_month_display": display_month_date.strftime("%Y년 %m월"),
         "prev_month": prev_month,
         "next_month": next_month,
-        "chart_data": category_totals
+        "chart_data": category_totals,
+        "d_day": d_day_to_pass
     })
 
-# ... (이하 add_ledger_expense, delete_ledger_expense, set_budget 함수는 기존과 동일)
+@router.get("/monthly_ledger/download_excel")
+def download_excel(request: Request, db: Session = Depends(get_db), month: str = None):
+    # 1. 기존 get_monthly_ledger 함수에서 지출 내역을 가져오는 부분 재사용
+    try:
+        base_date = datetime.strptime(month, "%Y-%m").date().replace(day=1) if month else date.today()
+    except ValueError:
+        base_date = date.today()
+
+    if base_date.day < 25:
+        display_month_date = base_date.replace(day=1)
+    else:
+        display_month_date = (base_date + relativedelta(months=1)).replace(day=1)
+        
+    initial_start_date = (display_month_date - relativedelta(months=1)).replace(day=25)
+    initial_end_date = display_month_date.replace(day=24)
+    start_date = adjust_date_for_weekend(initial_start_date)
+    end_date = adjust_date_for_weekend(initial_end_date)
+
+    expenses = db.query(LedgerExpense).filter(
+        LedgerExpense.expense_date.between(start_date, end_date)
+    ).order_by(LedgerExpense.expense_date.desc()).all()
+
+    # 2. openpyxl을 사용하여 메모리에 엑셀 파일 생성
+    output = BytesIO()
+    workbook = openpyxl.Workbook()
+    sheet = workbook.active
+    sheet.title = "월별 지출 내역"
+
+    # 헤더 작성
+    headers = ["날짜", "카테고리", "항목", "금액"]
+    sheet.append(headers)
+
+    # 데이터 작성
+    for expense in expenses:
+        sheet.append([
+            expense.expense_date.strftime("%Y-%m-%d"),
+            expense.category,
+            expense.item,
+            expense.amount
+        ])
+
+    # 3. 파일 저장 및 스트리밍 응답 반환
+    workbook.save(output)
+    output.seek(0)
+
+    filename = f"가계부_{display_month_date.strftime('%Y년%m월')}_지출내역.xlsx"
+    # --- 이 부분을 수정합니다. ---
+    encoded_filename = quote(filename)
+
+    return StreamingResponse(
+        output,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename*=UTF-8''{encoded_filename}"}
+    )  
+
 @router.post("/set_budget", response_class=RedirectResponse)
 async def set_budget(
     month: str = Form(...), # "YYYY-MM"

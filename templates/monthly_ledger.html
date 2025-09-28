@@ -20,7 +20,13 @@
             <a href="/dashboard" class="text-gray-600 hover:text-indigo-600 font-semibold transition-colors duration-200 flex items-center">
                 <i class="fas fa-arrow-left mr-2"></i> 대시보드
             </a>
+            <div class="flex items-center space-x-4">
             <h1 class="text-2xl sm:text-3xl font-bold text-gray-800">생활비 가계부</h1>
+            <a href="/monthly_ledger/download_excel?month={{ current_month_display[:4]}}-{{ current_month_display[6:8] }}"
+                class="bg-green-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-green-700 transition duration-300 ease-in-out text-center text-sm flex items-center">
+                <i class="fa-solid fa-file-excel mr-2"></i> 엑셀 다운로드
+            </a>
+        </div>
             <div class="w-24"></div>
         </header>
 
@@ -29,7 +35,13 @@
                 <a href="?month={{ prev_month }}" class="p-2 rounded-full hover:bg-gray-100 transition">
                     <i class="fas fa-chevron-left text-gray-600"></i>
                 </a>
-                <h2 class="text-2xl font-bold text-indigo-600">{{ current_month_display }}</h2>
+
+            <h2 class="text-2xl font-bold text-indigo-600 flex items-center justify-center">
+                {{ current_month_display }}
+                {% if d_day is not none %}
+                <span class="text-sm font-semibold text-gray-500 ml-2">( D-{{ d_day }}일 )</span>
+                {% endif %}
+            </h2>
                 <a href="?month={{ next_month }}" class="p-2 rounded-full hover:bg-gray-100 transition">
                     <i class="fas fa-chevron-right text-gray-600"></i>
                 </a>
@@ -102,6 +114,7 @@
                         </div>
                         <div class="ml-2">
                             <form action="/delete_ledger_expense/{{ expense.id }}" method="post" onsubmit="return confirm('이 항목을 정말로 삭제하시겠습니까?');">
+                                <input type="hidden" name="expense_id" value="{{ expense.id }}">
                                 <button type="submit" class="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
                                     <i class="fas fa-trash-alt"></i>
                                 </button>
@@ -200,9 +213,7 @@
                                                         fillStyle: data.datasets[0].backgroundColor[i],
                                                         strokeStyle: data.datasets[0].borderColor,
                                                         lineWidth: data.datasets[0].borderWidth,
-                                                        // ▼▼▼ 이 부분을 수정합니다. ▼▼▼
                                                         hidden: chart.getDatasetMeta(0).data[i].hidden
-                                                        // ▲▲▲ 여기까지 ▲▲▲
                                                     };
                                                 });
                                             }
@@ -250,6 +261,7 @@
                 });
             }
         });
+        
     </script>
 </body>
 </html>
