@@ -44,6 +44,11 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 # Jinja2 템플릿 엔진을 설정합니다.
 templates = Jinja2Templates(directory="templates")
 
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon():
+    # static 폴더 안에 있는 favicon.ico 파일을 직접 전송
+    return FileResponse("static/favicon.ico")
+
 # 스케줄러 설정
 scheduler = AsyncIOScheduler(timezone=pytz.timezone('Asia/Seoul'))
 scheduler.start()
