@@ -25,13 +25,11 @@ from app.api.routers import auth, expenses, tasks, dashboard, monthly_ledger
 from app.api import assets
 # ▼▼▼ [핵심] tasks.py에 있는 send_email 함수를 가져오는 이 부분은 그대로 둡니다. ▼▼▼
 from app.api.routers.tasks import send_email
-
+from app.api.routers import auth, expenses, tasks, dashboard, monthly_ledger, insurance # insurance
+from app.core import models 
+from app.core.database import engine, Base
 
 app = FastAPI()
-
-app.include_router(assets.router, tags=["Assets"])
-# --- FastAPI 앱 인스턴스 생성 ---
-
 
 # --- 세션 미들웨어 추가 ---
 SECRET_KEY = os.getenv("SECRET_KEY", "a_very_secret_key_that_should_be_changed")
@@ -51,17 +49,18 @@ scheduler = AsyncIOScheduler(timezone=pytz.timezone('Asia/Seoul'))
 scheduler.start()
 
 # --- 데이터베이스 테이블 생성 ---
-def create_db_tables():
-    print("Creating database tables...")
-    Base.metadata.create_all(bind=engine)
-    print("Database tables created.")
+print("Creating database tables...")
+models.Base.metadata.create_all(bind=engine) 
+print("Database tables created.")
 
 # --- 라우터 포함 ---
+app.include_router(assets.router, tags=["Assets"])
 app.include_router(auth.router, tags=["Auth"])
 app.include_router(expenses.router, tags=["Expenses"])
 app.include_router(tasks.router, tags=["Tasks"])
 app.include_router(dashboard.router, tags=["Dashboard"])
 app.include_router(monthly_ledger.router, tags=["MonthlyLedger"])
+app.include_router(insurance.router, tags=["Insurance"])
 
 # --- 메인 페이지 라우트 ---
 @app.get("/", response_class=HTMLResponse)
@@ -108,7 +107,7 @@ async def send_due_date_reminders():
 @app.on_event("startup")
 def startup_event():
     # 테이블 생성
-    create_db_tables()
+    #create_db_tables()
     
     # 스케줄러에 마감일 알림 작업 등록
     scheduler.add_job(send_due_date_reminders, 'cron', hour=9, minute=10)
