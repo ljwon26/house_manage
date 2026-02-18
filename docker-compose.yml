@@ -8,5 +8,6 @@ services:
     volumes:
       - ./data:/app/data
       - ./static:/app/static
+      - ./static/uploads:/app/static/uploads
 
 
