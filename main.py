@@ -4,26 +4,19 @@ import pytz
 from urllib.parse import urlencode
 from datetime import date, timedelta, datetime
 from typing import List
-
 from fastapi import FastAPI, Depends, Form, Request, BackgroundTasks, HTTPException, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 from sqlalchemy import Column, Integer, String, Date, REAL, Float, func
-# ▼▼▼ [수정] main.py에서는 더 이상 이메일 관련 라이브러리가 필요 없으므로 아래 2줄을 삭제해도 됩니다. ▼▼▼
-# import aiosmtplib
-# from email.mime.text import MIMEText 
 from pydantic import BaseModel
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from starlette.middleware.sessions import SessionMiddleware
-
-# --- 프로젝트 내부 모듈 임포트 ---
 from app.core.database import SessionLocal, Base, engine, get_db
 from app.core.models import Income, Expense, Task
 from app.api.routers import auth, expenses, tasks, dashboard, monthly_ledger 
 from app.api import assets
-# ▼▼▼ [핵심] tasks.py에 있는 send_email 함수를 가져오는 이 부분은 그대로 둡니다. ▼▼▼
 from app.api.routers.tasks import send_email
 from app.api.routers import auth, expenses, tasks, dashboard, monthly_ledger, insurance # insurance
 from app.core import models 
@@ -43,11 +36,6 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Jinja2 템플릿 엔진을 설정합니다.
 templates = Jinja2Templates(directory="templates")
-
-@app.get("/favicon.ico", include_in_schema=False)
-async def favicon():
-    # static 폴더 안에 있는 favicon.ico 파일을 직접 전송
-    return FileResponse("static/favicon.ico")
 
 # 스케줄러 설정
 scheduler = AsyncIOScheduler(timezone=pytz.timezone('Asia/Seoul'))
@@ -71,19 +59,6 @@ app.include_router(insurance.router, tags=["Insurance"])
 @app.get("/", response_class=HTMLResponse)
 def home(request: Request):
     return RedirectResponse(url="/login", status_code=303)
-
-# --- [핵심] 이메일 전송 기능 삭제 ---
-# ▼▼▼ 아래 async def send_email(...) 함수 전체를 삭제합니다. ▼▼▼
-# async def send_email(subject, recipient, body):
-#     sender = os.getenv("EMAIL_SENDER")
-#     if not sender:
-#         print("EMAIL_SENDER environment variable is not set. Skipping email.")
-#         return
-#     ... (이하 함수 내용 전체) ...
-#     except Exception as e:
-#         print(f"Error sending email: {e}")
-# ▲▲▲ 여기까지 함수 전체를 삭제해주세요. ▲▲▲
-
 
 # --- 마감일 이메일 발송 함수 정의 ---
 async def send_due_date_reminders():
@@ -111,10 +86,6 @@ async def send_due_date_reminders():
 # --- 애플리케이션 시작 시 실행될 이벤트 ---
 @app.on_event("startup")
 def startup_event():
-    # 테이블 생성
-    #create_db_tables()
     
     # 스케줄러에 마감일 알림 작업 등록
     scheduler.add_job(send_due_date_reminders, 'cron', hour=9, minute=10)
-    
-    #print("마감일 알림 스케줄러가 매일 09:10에 실행되도록 설정되었습니다.")
