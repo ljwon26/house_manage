@@ -4,8 +4,9 @@ services:
   app:
     build: .
     ports:
-      - "5000:5000"
+      - "5000"
     volumes:
-      # [수정] ./data 폴더를 컨테이너의 /app/data 폴더에 마운트합니다.
       - ./data:/app/data
       - ./static:/app/static
+
+
