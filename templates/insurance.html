@@ -1,185 +1,288 @@
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>보험 관리</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
-    </style>
-    <script>
-        function openTab(evt, memberName) {
-            var i, x, tablinks;
-            x = document.getElementsByClassName("member-tab");
-            for (i = 0; i < x.length; i++) { x[i].style.display = "none"; }
-            tablinks = document.getElementsByClassName("tablink");
-            for (i = 0; i < tablinks.length; i++) { 
-                tablinks[i].className = tablinks[i].className.replace(" border-indigo-600 text-indigo-600", " border-transparent text-gray-500"); 
-            }
-            document.getElementById(memberName).style.display = "block";
-            evt.currentTarget.className += " border-indigo-600 text-indigo-600";
-        }
+{% extends "layout.html" %}
 
-        function openEditModal(btn) {
-            const id = btn.dataset.id;
-            const member = btn.dataset.member;
-            const company = btn.dataset.company;
-            const name = btn.dataset.name;
-            const memo = btn.dataset.memo;
+{% block title %}보험 관리 - J&D Asset{% endblock %}
 
-            document.getElementById('edit_insurance_id').value = id;
-            document.getElementById('edit_member_name').value = member;
-            document.getElementById('edit_company').value = company;
-            document.getElementById('edit_insurance_name').value = name;
-            document.getElementById('edit_memo').value = memo;
+{% block content %}
+<style>
+    /* 폼 입력 필드 전용 프리미엄 스타일 */
+    .form-input {
+        width: 100%; padding: 0.875rem 1rem;
+        background-color: #f8fafc; border: 1px solid #e2e8f0;
+        border-radius: 0.75rem; color: #334155; font-weight: 500;
+        transition: all 0.2s ease-in-out;
+    }
+    .form-input:focus {
+        outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+    }
+    /* 카드 호버(마우스 오버) 애니메이션 */
+    .hover-lift {
+        transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease;
+    }
+    .hover-lift:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 24px -8px rgba(59, 130, 246, 0.15);
+    }
+    /* 파일 업로드 버튼 스타일링 */
+    .file-input-custom::file-selector-button {
+        margin-right: 1rem; padding: 0.5rem 1rem;
+        border-radius: 0.5rem; border: none;
+        background-color: #eff6ff; color: #2563eb;
+        font-weight: 600; cursor: pointer; transition: background-color 0.2s;
+    }
+    .file-input-custom::file-selector-button:hover { background-color: #dbeafe; }
+</style>
 
-            document.getElementById('editInsuranceModal').classList.remove('hidden');
-        }
-    </script>
-</head>
-<body class="bg-gray-100 p-8">
-    <div class="max-w-6xl mx-auto">
-        <header class="flex flex-col sm:flex-row justify-between items-center mb-8 gap-4">
-            <h1 class="text-3xl font-bold text-gray-800">
-                <i class="fa-solid fa-file-shield text-indigo-600 mr-2"></i>보험 관리
-            </h1>
-            <div class="flex space-x-2">
-                <a href="/dashboard" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition flex items-center shadow-md">
-                    <i class="fa-solid fa-arrow-left mr-1"></i> 대시보드
-                </a>
-                <button onclick="document.getElementById('addInsuranceModal').classList.remove('hidden')" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg transition flex items-center shadow-md">
-                    <i class="fa-solid fa-plus mr-1"></i> 보험 추가
+<div class="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4 animate-fade-in-up">
+    <div>
+        <h1 class="text-3xl font-bold text-slate-800 tracking-tight flex items-center gap-3">
+            <div class="w-10 h-10 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center shadow-sm border border-blue-100">
+                <i class="fa-solid fa-shield-halved text-xl"></i>
+            </div>
+            보험 관리
+        </h1>
+        <p class="text-slate-500 mt-2 font-medium">우리 가족의 든든한 보장 내역을 한눈에 관리하세요.</p>
+    </div>
+    
+    <button onclick="document.getElementById('addInsuranceModal').classList.remove('hidden')" class="bg-white hover:bg-blue-50 border border-slate-200 hover:border-blue-200 text-blue-600 font-bold py-3 px-6 rounded-xl shadow-sm hover:shadow-md transition-all flex items-center gap-2 group">
+        <div class="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center group-hover:bg-blue-500 group-hover:text-white transition-colors">
+            <i class="fa-solid fa-plus"></i>
+        </div>
+        새 보험 등록
+    </button>
+</div>
+
+<div class="flex space-x-3 mb-6 overflow-x-auto pb-2 scrollbar-hide">
+    {% for member in members %}
+    <button class="tablink px-6 py-3.5 rounded-[1rem] font-bold text-sm transition-all duration-200 whitespace-nowrap border
+        {{ 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-500/30' if loop.first else 'bg-white text-slate-500 border-slate-200 hover:bg-slate-50 hover:text-blue-600' }}"
+        onclick="openTab(event, '{{ member.name }}')">
+        <i class="fa-regular fa-user mr-1.5"></i> {{ member.name }} 님의 보험
+    </button>
+    {% endfor %}
+</div>
+
+<div class="bg-white rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 p-8 min-h-[400px]">
+    {% for member in members %}
+    {% set member_insurances = insurances | selectattr('family_member_name', 'equalto', member.name) | list %}
+    
+    <div id="{{ member.name }}" class="member-tab" style="display: {{ 'block' if loop.first else 'none' }}">
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            
+            {% if member_insurances %}
+                {% for ins in member_insurances %}
+                <div class="bg-white rounded-[1.5rem] border border-slate-100 p-6 shadow-sm hover-lift flex flex-col h-full relative group">
+                    <div class="flex justify-between items-start mb-4">
+                        <span class="bg-blue-50 text-blue-600 text-xs font-bold px-3 py-1.5 rounded-full border border-blue-100">
+                            {{ ins.company }}
+                        </span>
+                        
+                        <div class="flex items-center gap-1 opacity-40 group-hover:opacity-100 transition-opacity">
+                            <button onclick="openEditModal(this)" 
+                                    data-id="{{ ins.id }}" 
+                                    data-member="{{ ins.family_member_name }}" 
+                                    data-company="{{ ins.company }}" 
+                                    data-name="{{ ins.insurance_name }}" 
+                                    data-memo="{{ ins.memo or '' }}"
+                                    class="w-8 h-8 rounded-lg bg-slate-50 text-slate-500 hover:bg-blue-50 hover:text-blue-600 flex items-center justify-center transition-colors border border-slate-100" title="수정">
+                                <i class="fa-solid fa-pen text-sm"></i>
+                            </button>
+                            <form action="/insurance/delete" method="post" onsubmit="return confirm('이 보험 내역을 정말 삭제하시겠습니까?');" class="inline m-0">
+                                <input type="hidden" name="insurance_id" value="{{ ins.id }}">
+                                <button type="submit" class="w-8 h-8 rounded-lg bg-slate-50 text-slate-500 hover:bg-rose-50 hover:text-rose-600 flex items-center justify-center transition-colors border border-slate-100" title="삭제">
+                                    <i class="fa-solid fa-trash text-sm"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                    
+                    <h3 class="text-xl font-extrabold text-slate-800 mb-2 leading-snug">{{ ins.insurance_name }}</h3>
+                    
+                    <div class="text-sm text-slate-500 bg-slate-50 p-4 rounded-xl border border-slate-100 flex-grow mb-5 line-clamp-3">
+                        {{ ins.memo or '등록된 보장내역(메모)이 없습니다.' }}
+                    </div>
+                    
+                    <div class="mt-auto pt-4 border-t border-slate-50">
+                        {% if ins.file_path %}
+                        <a href="{{ ins.file_path }}" target="_blank" class="w-full bg-slate-50 hover:bg-rose-50 border border-slate-100 hover:border-rose-100 text-slate-600 hover:text-rose-600 font-bold py-3 rounded-xl flex items-center justify-center transition-colors shadow-sm">
+                            <i class="fa-solid fa-file-pdf mr-2 text-rose-500"></i> 보험 증서 보기
+                        </a>
+                        {% else %}
+                        <div class="w-full bg-slate-50 text-slate-300 font-bold py-3 rounded-xl flex items-center justify-center border border-slate-100 cursor-not-allowed">
+                            <i class="fa-solid fa-file-circle-xmark mr-2"></i> 첨부된 증서 없음
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="col-span-full flex flex-col items-center justify-center py-20 text-center">
+                    <div class="w-20 h-20 rounded-full bg-slate-50 flex items-center justify-center mb-4 shadow-inner">
+                        <i class="fa-solid fa-folder-open text-3xl text-slate-300"></i>
+                    </div>
+                    <h4 class="text-lg font-bold text-slate-600 mb-1">등록된 보험 내역이 없습니다</h4>
+                    <p class="text-slate-400 text-sm mb-6">우측 상단의 '새 보험 등록' 버튼을 눌러 내역을 추가해보세요.</p>
+                </div>
+            {% endif %}
+            
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<div id="addInsuranceModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm hidden items-center justify-center p-4 z-50 animate-fade-in-up">
+    <div class="bg-white p-8 rounded-[2rem] shadow-2xl w-full max-w-lg border border-slate-100 relative">
+        <h3 class="text-xl font-extrabold text-slate-800 mb-6 flex items-center gap-2">
+            <div class="w-8 h-8 rounded-lg bg-blue-50 text-blue-500 flex items-center justify-center">
+                <i class="fa-solid fa-plus"></i>
+            </div>
+            새 보험 등록
+        </h3>
+        
+        <form action="/insurance/add" method="post" enctype="multipart/form-data" class="space-y-5">
+            <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">대상 가족</label>
+                <select name="member_name" class="form-input bg-white cursor-pointer" required>
+                    {% for member in members %}
+                    <option value="{{ member.name }}">{{ member.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">보험사</label>
+                    <input type="text" name="company" required class="form-input" placeholder="예: 삼성화재">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">보험명</label>
+                    <input type="text" name="insurance_name" required class="form-input" placeholder="예: 실비보험">
+                </div>
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">보장내역 (메모)</label>
+                <textarea name="memo" rows="3" class="form-input resize-none" placeholder="주요 보장 내용을 적어두면 편리합니다."></textarea>
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">보험 증서 첨부 (PDF/이미지)</label>
+                <input type="file" name="file" class="block w-full text-sm text-slate-500 file-input-custom border border-slate-200 rounded-xl p-2 bg-slate-50">
+            </div>
+            
+            <div class="flex justify-end gap-3 pt-4 mt-2 border-t border-slate-50">
+                <button type="button" onclick="document.getElementById('addInsuranceModal').classList.add('hidden')" class="w-1/3 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-3.5 rounded-xl transition-colors">
+                    취소
+                </button>
+                <button type="submit" class="w-2/3 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl transition-colors shadow-lg shadow-blue-500/30">
+                    저장하기
                 </button>
             </div>
-        </header>
+        </form>
+    </div>
+</div>
 
-        <div class="bg-white rounded-t-2xl px-6 pt-4 border-b border-gray-200 shadow-sm flex overflow-x-auto">
-            {% for member in members %}
-            <button class="tablink px-6 py-3 border-b-2 font-medium text-lg whitespace-nowrap transition-colors duration-200
-                {{ 'border-indigo-600 text-indigo-600' if loop.first else 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300' }}" 
-                onclick="openTab(event, '{{ member.name }}')">
-                {{ member.name }}
-            </button>
-            {% endfor %}
-        </div>
-
-        <div class="bg-white rounded-b-2xl shadow-lg p-6 min-h-[400px]">
-            {% for member in members %}
-            <div id="{{ member.name }}" class="member-tab" style="display: {{ 'block' if loop.first else 'none' }}">
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    
-                    {% for ins in insurances if ins.family_member_name == member.name %}
-                        
-                        <div class="bg-gray-50 rounded-xl border border-gray-200 p-5 hover:shadow-md transition relative group">
-                            <div class="flex justify-between items-start mb-3">
-                                <span class="bg-indigo-100 text-indigo-800 text-xs font-bold px-2.5 py-1 rounded-full">{{ ins.company }}</span>
-                                <div class="flex items-center">
-                                    <button onclick="openEditModal(this)" 
-                                            data-id="{{ ins.id }}" 
-                                            data-member="{{ ins.family_member_name }}" 
-                                            data-company="{{ ins.company }}" 
-                                            data-name="{{ ins.insurance_name }}" 
-                                            data-memo="{{ ins.memo or '' }}"
-                                            class="text-gray-400 hover:text-indigo-600 transition-colors p-1 mr-1">
-                                        <i class="fa-solid fa-pen-to-square"></i>
-                                    </button>
-                                    <form action="/insurance/delete" method="post" onsubmit="return confirm('정말 삭제하시겠습니까?');" class="inline">
-                                        <input type="hidden" name="insurance_id" value="{{ ins.id }}">
-                                        <button type="submit" class="text-gray-400 hover:text-red-500 transition-colors p-1">
-                                            <i class="fa-solid fa-trash-can"></i>
-                                        </button>
-                                    </form>
-                                </div>
-                            </div>
-                            <h3 class="text-xl font-bold text-gray-800 mb-2">{{ ins.insurance_name }}</h3>
-                            <p class="text-gray-600 text-sm mb-4 line-clamp-3 bg-white p-3 rounded-lg border border-gray-100 h-20">
-                                {{ ins.memo or '메모 없음' }}
-                            </p>
-                            {% if ins.file_path %}
-                            <a href="{{ ins.file_path }}" target="_blank" class="flex items-center justify-center w-full bg-white border border-gray-300 text-gray-700 py-2 rounded-lg text-sm hover:bg-indigo-50 hover:text-indigo-600 transition font-medium">
-                                <i class="fa-solid fa-file-pdf mr-2"></i> 증서 보기
-                            </a>
-                            {% else %}
-                            <div class="flex items-center justify-center w-full bg-gray-100 text-gray-400 py-2 rounded-lg text-sm cursor-not-allowed border border-transparent">
-                                <i class="fa-solid fa-file-circle-xmark mr-2"></i> 증서 없음
-                            </div>
-                            {% endif %}
-                        </div>
-
-                    {% else %}
-                        
-                        {# 보험 데이터가 하나도 없을 때만 실행되는 영역 #}
-                        <div class="col-span-full flex flex-col items-center justify-center py-20 text-gray-400">
-                            <i class="fa-regular fa-folder-open text-5xl mb-4 text-gray-300"></i>
-                            <p class="text-lg font-medium">등록된 보험 내역이 없습니다.</p>
-                            <p class="text-sm">우측 상단 '보험 추가' 버튼을 눌러 등록해주세요.</p>
-                        </div>
-
+<div id="editInsuranceModal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm hidden items-center justify-center p-4 z-50 animate-fade-in-up">
+    <div class="bg-white p-8 rounded-[2rem] shadow-2xl w-full max-w-lg border border-slate-100 relative">
+        <h3 class="text-xl font-extrabold text-slate-800 mb-6 flex items-center gap-2">
+            <div class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-500 flex items-center justify-center">
+                <i class="fa-solid fa-pen"></i>
+            </div>
+            보험 정보 수정
+        </h3>
+        
+        <form action="/insurance/update" method="post" enctype="multipart/form-data" class="space-y-5">
+            <input type="hidden" name="insurance_id" id="edit_insurance_id">
+            
+            <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">대상 가족</label>
+                <select name="member_name" id="edit_member_name" class="form-input bg-white cursor-pointer" required>
+                    {% for member in members %}
+                    <option value="{{ member.name }}">{{ member.name }}</option>
                     {% endfor %}
-                </div>
+                </select>
             </div>
-            {% endfor %}
-        </div>
-    </div>
-
-    <div id="addInsuranceModal" class="fixed inset-0 bg-gray-900 bg-opacity-60 hidden flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
-            <div class="bg-indigo-600 p-4">
-                <h2 class="text-xl font-bold text-white flex items-center"><i class="fa-solid fa-plus-circle mr-2"></i> 새 보험 등록</h2>
-            </div>
-            <form action="/insurance/add" method="post" enctype="multipart/form-data" class="p-6 space-y-4">
+            <div class="grid grid-cols-2 gap-4">
                 <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-1">대상 가족</label>
-                    <select name="member_name" class="w-full border border-gray-300 rounded-lg p-2.5 bg-white">
-                        {% for member in members %}
-                        <option value="{{ member.name }}">{{ member.name }}</option>
-                        {% endfor %}
-                    </select>
+                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">보험사</label>
+                    <input type="text" name="company" id="edit_company" required class="form-input">
                 </div>
-                <div class="grid grid-cols-2 gap-4">
-                    <div><label class="block text-sm font-semibold text-gray-700 mb-1">보험사</label><input type="text" name="company" required class="w-full border border-gray-300 rounded-lg p-2.5"></div>
-                    <div><label class="block text-sm font-semibold text-gray-700 mb-1">보험명</label><input type="text" name="insurance_name" required class="w-full border border-gray-300 rounded-lg p-2.5"></div>
-                </div>
-                <div><label class="block text-sm font-semibold text-gray-700 mb-1">보장내역(메모)</label><textarea name="memo" rows="3" class="w-full border border-gray-300 rounded-lg p-2.5"></textarea></div>
-                <div><label class="block text-sm font-semibold text-gray-700 mb-1">보험 증서</label><input type="file" name="file" class="block w-full text-sm text-gray-500"/></div>
-                <div class="flex justify-end space-x-3 mt-6 pt-4 border-t border-gray-100">
-                    <button type="button" onclick="document.getElementById('addInsuranceModal').classList.add('hidden')" class="px-5 py-2.5 bg-gray-100 text-gray-700 rounded-lg">취소</button>
-                    <button type="submit" class="px-5 py-2.5 bg-indigo-600 text-white rounded-lg">저장하기</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <div id="editInsuranceModal" class="fixed inset-0 bg-gray-900 bg-opacity-60 hidden flex items-center justify-center z-50 p-4 backdrop-blur-sm">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
-            <div class="bg-indigo-600 p-4">
-                <h2 class="text-xl font-bold text-white flex items-center"><i class="fa-solid fa-pen-to-square mr-2"></i> 보험 정보 수정</h2>
-            </div>
-            <form action="/insurance/update" method="post" enctype="multipart/form-data" class="p-6 space-y-4">
-                <input type="hidden" name="insurance_id" id="edit_insurance_id">
                 <div>
-                    <label class="block text-sm font-semibold text-gray-700 mb-1">대상 가족</label>
-                    <select name="member_name" id="edit_member_name" class="w-full border border-gray-300 rounded-lg p-2.5 bg-white">
-                        {% for member in members %}
-                        <option value="{{ member.name }}">{{ member.name }}</option>
-                        {% endfor %}
-                    </select>
+                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">보험명</label>
+                    <input type="text" name="insurance_name" id="edit_insurance_name" required class="form-input">
                 </div>
-                <div class="grid grid-cols-2 gap-4">
-                    <div><label class="block text-sm font-semibold text-gray-700 mb-1">보험사</label><input type="text" name="company" id="edit_company" required class="w-full border border-gray-300 rounded-lg p-2.5"></div>
-                    <div><label class="block text-sm font-semibold text-gray-700 mb-1">보험명</label><input type="text" name="insurance_name" id="edit_insurance_name" required class="w-full border border-gray-300 rounded-lg p-2.5"></div>
-                </div>
-                <div><label class="block text-sm font-semibold text-gray-700 mb-1">보장내역(메모)</label><textarea name="memo" id="edit_memo" rows="3" class="w-full border border-gray-300 rounded-lg p-2.5"></textarea></div>
-                <div><label class="block text-sm font-semibold text-gray-700 mb-1">보험 증서 (교체 시)</label><input type="file" name="file" class="block w-full text-sm text-gray-500"/></div>
-                <div class="flex justify-end space-x-3 mt-6 pt-4 border-t border-gray-100">
-                    <button type="button" onclick="document.getElementById('editInsuranceModal').classList.add('hidden')" class="px-5 py-2.5 bg-gray-100 text-gray-700 rounded-lg">취소</button>
-                    <button type="submit" class="px-5 py-2.5 bg-indigo-600 text-white rounded-lg">수정완료</button>
-                </div>
-            </form>
-        </div>
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">보장내역 (메모)</label>
+                <textarea name="memo" id="edit_memo" rows="3" class="form-input resize-none"></textarea>
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">보험 증서 교체 (선택사항)</label>
+                <input type="file" name="file" class="block w-full text-sm text-slate-500 file-input-custom border border-slate-200 rounded-xl p-2 bg-slate-50">
+                <p class="text-xs text-slate-400 mt-2 ml-1">* 파일을 선택하지 않으면 기존 증서가 유지됩니다.</p>
+            </div>
+            
+            <div class="flex justify-end gap-3 pt-4 mt-2 border-t border-slate-50">
+                <button type="button" onclick="document.getElementById('editInsuranceModal').classList.add('hidden')" class="w-1/3 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-3.5 rounded-xl transition-colors">
+                    취소
+                </button>
+                <button type="submit" class="w-2/3 bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-3.5 rounded-xl transition-colors shadow-lg shadow-emerald-500/30">
+                    수정 완료
+                </button>
+            </div>
+        </form>
     </div>
-</body>
-</html>
+</div>
+
+<script>
+    // 1. 탭 전환 기능 (클래스 토글링 방식으로 고급스럽게 수정)
+    function openTab(evt, memberName) {
+        // 모든 탭 내용 숨기기
+        const tabs = document.getElementsByClassName("member-tab");
+        for (let i = 0; i < tabs.length; i++) {
+            tabs[i].style.display = "none";
+        }
+        
+        // 버튼 스타일 초기화 세팅
+        const tablinks = document.getElementsByClassName("tablink");
+        const activeClasses = ["bg-blue-600", "text-white", "border-blue-600", "shadow-md", "shadow-blue-500/30"];
+        const inactiveClasses = ["bg-white", "text-slate-500", "border-slate-200", "hover:bg-slate-50", "hover:text-blue-600"];
+        
+        // 모든 버튼을 비활성화 스타일로 덮기
+        for (let i = 0; i < tablinks.length; i++) {
+            tablinks[i].classList.remove(...activeClasses);
+            tablinks[i].classList.add(...inactiveClasses);
+        }
+        
+        // 클릭한 탭의 내용과 버튼만 활성화
+        document.getElementById(memberName).style.display = "block";
+        evt.currentTarget.classList.remove(...inactiveClasses);
+        evt.currentTarget.classList.add(...activeClasses);
+    }
+
+    // 2. 수정 모달 데이터 채우기 및 열기
+    function openEditModal(btn) {
+        // 버튼의 data-* 속성에서 값을 읽어옴
+        const id = btn.dataset.id;
+        const member = btn.dataset.member;
+        const company = btn.dataset.company;
+        const name = btn.dataset.name;
+        const memo = btn.dataset.memo;
+
+        // 수정 폼 입력란에 값 채우기
+        document.getElementById('edit_insurance_id').value = id;
+        document.getElementById('edit_member_name').value = member;
+        document.getElementById('edit_company').value = company;
+        document.getElementById('edit_insurance_name').value = name;
+        document.getElementById('edit_memo').value = memo;
+
+        // 모달 팝업 표시
+        const modal = document.getElementById('editInsuranceModal');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex'); // hidden 해제 시 flex를 줘야 중앙 정렬됨
+    }
+    
+    // 새 보험 등록 모달 여는 함수도 flex 추가 처리
+    document.querySelector("button[onclick*='addInsuranceModal']").onclick = function() {
+        const modal = document.getElementById('addInsuranceModal');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    };
+</script>
+{% endblock %}

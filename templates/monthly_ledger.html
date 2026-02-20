@@ -1,270 +1,373 @@
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>월별 생활비 가계부</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
-    <style>
-        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; }
-        .progress-bar-fill { transition: width 0.5s ease-in-out; }
-    </style>
-</head>
-<body class="p-4 sm:p-8">
-    <div class="max-w-4xl mx-auto">
-        <header class="flex justify-between items-center mb-6">
-            <a href="/dashboard" class="text-gray-600 hover:text-indigo-600 font-semibold transition-colors duration-200 flex items-center">
-                <i class="fas fa-arrow-left mr-2"></i> 대시보드
-            </a>
-            <h1 class="text-2xl sm:text-3xl font-bold text-gray-800">생활비 가계부</h1>
-            <a href="/monthly_ledger/download_excel?month={{ current_month_display[:4]}}-{{ current_month_display[6:8] }}"
-                class="bg-green-600 text-white font-semibold py-2 px-4 rounded-lg shadow-md hover:bg-green-700 transition duration-300 ease-in-out text-center text-sm flex items-center">
-                <i class="fa-solid fa-file-excel mr-2"></i> 엑셀 다운로드
-            </a>
-        </header>
+{% extends "layout.html" %}
 
-        <section class="bg-white p-6 rounded-2xl shadow-lg mb-8">
-            <div class="flex justify-between items-center mb-4">
-                <a href="?month={{ prev_month }}" class="p-2 rounded-full hover:bg-gray-100 transition">
-                    <i class="fas fa-chevron-left text-gray-600"></i>
-                </a>
+{% block title %}월별 생활비 가계부 - J&D Asset{% endblock %}
 
-            <h2 class="text-2xl font-bold text-indigo-600 flex items-center justify-center">
-                {{ current_month_display }}
-                {% if d_day is not none %}
-                <span class="text-sm font-semibold text-gray-500 ml-2">( D-{{ d_day }}일 )</span>
-                {% endif %}
-            </h2>
-                <a href="?month={{ next_month }}" class="p-2 rounded-full hover:bg-gray-100 transition">
-                    <i class="fas fa-chevron-right text-gray-600"></i>
-                </a>
+{% block content %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+
+<style>
+    .premium-blue-gradient {
+        background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
+        position: relative; overflow: hidden;
+    }
+    .premium-blue-gradient::before {
+        content: ''; position: absolute; top: -50%; left: -50%; width: 200%; height: 200%;
+        background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 60%);
+        transform: rotate(30deg); pointer-events: none;
+    }
+    .form-input {
+        width: 100%; padding: 0.875rem 1rem;
+        background-color: #f8fafc; border: 1px solid #e2e8f0;
+        border-radius: 0.75rem; color: #334155; font-weight: 500;
+        transition: all 0.2s;
+    }
+    .form-input:focus {
+        outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+    }
+    .hover-lift { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+    .hover-lift:hover { transform: translateY(-4px); box-shadow: 0 12px 24px -8px rgba(0, 0, 0, 0.08); }
+    .progress-bar-fill { transition: width 0.8s cubic-bezier(0.34, 1.56, 0.64, 1); }
+</style>
+
+<div class="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4 animate-fade-in-up">
+    <div>
+        <h1 class="text-3xl font-bold text-slate-800 tracking-tight flex items-center gap-3">
+            <div class="w-10 h-10 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center shadow-sm border border-blue-100">
+                <i class="fa-solid fa-money-check-dollar text-xl"></i>
             </div>
-            
+            월별 생활비 가계부
+        </h1>
+        <p class="text-slate-500 mt-2 font-medium">고정된 예산 안에서 이번 달 지출을 현명하게 관리하세요.</p>
+    </div>
+    
+    <a href="/monthly_ledger/download_excel?month={{ current_month_display[:4]}}-{{ current_month_display[6:8] }}"
+       class="bg-white hover:bg-emerald-50 border border-slate-200 hover:border-emerald-200 text-emerald-600 font-bold py-3 px-6 rounded-xl shadow-sm hover:shadow-md transition-all flex items-center gap-2 group">
+        <div class="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center group-hover:bg-emerald-500 group-hover:text-white transition-colors">
+            <i class="fa-solid fa-file-excel"></i>
+        </div>
+        엑셀 다운로드
+    </a>
+</div>
+
+<div class="bg-white rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 p-6 mb-8 flex justify-center items-center gap-8">
+    <a href="?month={{ prev_month }}" class="w-10 h-10 rounded-full bg-slate-50 hover:bg-blue-50 text-slate-400 hover:text-blue-600 flex items-center justify-center transition-colors border border-slate-100">
+        <i class="fas fa-chevron-left"></i>
+    </a>
+    
+    <h2 class="text-2xl font-extrabold text-slate-800 flex items-center justify-center tracking-tight">
+        {{ current_month_display }}
+        {% if d_day is not none %}
+        <span class="inline-flex items-center justify-center px-3 py-1 ml-3 rounded-full bg-rose-50 border border-rose-100 text-rose-500 text-sm font-bold shadow-sm">
+            D-{{ d_day }}일
+        </span>
+        {% endif %}
+    </h2>
+    
+    <a href="?month={{ next_month }}" class="w-10 h-10 rounded-full bg-slate-50 hover:bg-blue-50 text-slate-400 hover:text-blue-600 flex items-center justify-center transition-colors border border-slate-100">
+        <i class="fas fa-chevron-right"></i>
+    </a>
+</div>
+
+<div class="mb-10">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+        <div class="premium-blue-gradient rounded-[2rem] shadow-xl shadow-blue-500/20 p-8 text-white flex flex-col justify-between group">
+            <div class="flex justify-between items-start mb-2">
+                <h3 class="text-blue-100/80 text-sm font-medium tracking-wide uppercase">남은 예산</h3>
+                <div class="w-10 h-10 bg-white/10 backdrop-blur-md rounded-xl flex items-center justify-center text-white/90 shadow-inner group-hover:scale-110 transition-transform">
+                    <i class="fa-solid fa-wallet"></i>
+                </div>
+            </div>
+            <p class="text-3xl sm:text-4xl font-extrabold tracking-tighter drop-shadow-md">
+                ₩ {{ "{:,.0f}".format(remaining_budget) }}
+            </p>
+        </div>
+
+        <div class="bg-white rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 p-8 flex flex-col justify-between hover-lift">
+            <div class="flex justify-between items-start mb-2">
+                <h3 class="text-slate-500 text-sm font-medium tracking-wide uppercase">사용 금액</h3>
+                <div class="w-10 h-10 bg-rose-50 rounded-xl flex items-center justify-center text-rose-500">
+                    <i class="fa-solid fa-arrow-trend-up"></i>
+                </div>
+            </div>
+            <p class="text-3xl font-bold text-slate-800 tracking-tighter">
+                ₩ {{ "{:,.0f}".format(total_spent) }}
+            </p>
+        </div>
+
+        <div class="bg-white rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 p-8 flex flex-col justify-between hover-lift relative overflow-hidden">
+            <div class="flex justify-between items-start mb-2">
+                <h3 class="text-slate-500 text-sm font-medium tracking-wide uppercase">설정된 총 예산</h3>
+                <button id="edit-budget-btn" class="w-10 h-10 bg-slate-50 hover:bg-blue-50 text-slate-400 hover:text-blue-600 rounded-xl flex items-center justify-center transition-colors border border-slate-100" title="예산 수정">
+                    <i class="fas fa-pencil-alt"></i>
+                </button>
+            </div>
+            <p class="text-3xl font-bold text-slate-800 tracking-tighter">
+                ₩ {{ "{:,.0f}".format(budget) }}
+            </p>
+        </div>
+    </div>
+
+    <div class="bg-white p-6 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100">
+        <div class="flex justify-between text-sm font-bold mb-3">
+            <span class="text-slate-500">예산 소진율</span>
+            <span class="{% if usage_percentage > 100 %}text-rose-500{% else %}text-blue-600{% endif %}">{{ usage_percentage | round(1) }}%</span>
+        </div>
+        <div class="w-full bg-slate-100 rounded-full h-4 overflow-hidden border border-slate-200/60 shadow-inner">
+            <div class="{% if usage_percentage > 100 %}bg-rose-500{% else %}bg-blue-600{% endif %} h-4 rounded-full progress-bar-fill relative"
+                 style="width: {% if usage_percentage > 100 %}100{% else %}{{ usage_percentage }}{% endif %}%;">
+                <div class="absolute inset-0 bg-white/20 w-full" style="background-image: linear-gradient(45deg,rgba(255,255,255,.15) 25%,transparent 25%,transparent 50%,rgba(255,255,255,.15) 50%,rgba(255,255,255,.15) 75%,transparent 75%,transparent); background-size: 1rem 1rem;"></div>
+            </div>
+        </div>
+        {% if usage_percentage > 100 %}
+        <p class="text-xs text-rose-500 mt-3 font-bold flex items-center"><i class="fa-solid fa-circle-exclamation mr-1.5"></i> 예산을 초과했습니다!</p>
+        {% endif %}
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-5 gap-8 mb-10">
+    
+    <div class="lg:col-span-2 bg-white p-8 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 h-fit">
+        <h3 class="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2">
+            <div class="w-8 h-8 rounded-lg bg-blue-50 text-blue-500 flex items-center justify-center">
+                <i class="fa-solid fa-plus"></i>
+            </div>
+            지출 내역 추가
+        </h3>
+        
+        <form action="/add_ledger_expense" method="post" class="space-y-5">
             <div>
-                <div class="flex justify-between text-gray-600 mb-1">
-                    <span>사용 금액: {{ "{:,.0f}".format(total_spent) }}원</span>
-                    <span>남은 금액: <span class="font-bold text-indigo-600">{{ "{:,.0f}".format(remaining_budget) }}원</span></span>
-                </div>
-            <div class="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
-                {# usage_percentage가 100을 넘으면 배경색을 빨간색(bg-red-500)으로, 아니면 파란색(bg-indigo-600)으로 설정합니다. #}
-                <div class="{% if usage_percentage > 100 %}bg-red-500{% else %}bg-indigo-600{% endif %} h-4 rounded-full progress-bar-fill"
-                    {# 너비는 최대 100%를 넘지 않도록 설정합니다. #}
-                    style="width: {% if usage_percentage > 100 %}100{% else %}{{ usage_percentage }}{% endif %}%;">
-                </div>
+                <label for="expense_date" class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">날짜</label>
+                <input type="date" id="expense_date" name="expense_date" class="form-input" required>
             </div>
-
-                <div class="text-right text-sm text-gray-500 mt-1 flex justify-end items-center">
-                    <span>이번 달 예산: {{ "{:,.0f}".format(budget) }}원</span>
-                    <button id="edit-budget-btn" class="ml-2 text-indigo-500 hover:text-indigo-700 text-xs p-1">
-                        <i class="fas fa-pencil-alt"></i>
-                    </button>
-                </div>
+            <div>
+                <label for="category" class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">카테고리</label>
+                <select id="category" name="category" class="form-input" required>
+                    <option value="식비">식비</option>
+                    <option value="생활용품">생활용품</option>
+                    <option value="아기관련">아기관련</option>
+                    <option value="차량관련">차량관련</option>
+                    <option value="교통비">교통비</option>
+                    <option value="문화/여가">문화/여가</option>
+                    <option value="기타">기타</option>
+                </select>
             </div>
-        </section>
-
-        <div class="grid grid-cols-1 lg:grid-cols-5 gap-8">
-            <aside class="lg:col-span-2 bg-white p-6 rounded-2xl shadow-lg h-fit">
-                <h3 class="text-xl font-bold text-gray-800 mb-4">지출 내역 추가</h3>
-                <form action="/add_ledger_expense" method="post" class="space-y-4">
-                    <div>
-                        <label for="expense_date" class="block text-sm font-medium text-gray-700">날짜</label>
-                        <input type="date" id="expense_date" name="expense_date" class="mt-1 w-full p-2 border border-gray-300 rounded-lg" required>
-                    </div>
-                    <div>
-                        <label for="category" class="block text-sm font-medium text-gray-700">카테고리</label>
-                        <select id="category" name="category" class="mt-1 w-full p-2 border border-gray-300 rounded-lg" required>
-                            <option value="식비">식비</option>
-                            <option value="생활용품">생활용품</option>
-                            <option value="생활용품">아기관련</option>
-                            <option value="생활용품">차량관련</option>
-                            <option value="교통비">교통비</option>
-                            <option value="문화/여가">문화/여가</option>
-                            <option value="기타">기타</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label for="item" class="block text-sm font-medium text-gray-700">항목</label>
-                        <input type="text" id="item" name="item" class="mt-1 w-full p-2 border border-gray-300 rounded-lg" placeholder="예: 스타벅스 커피" required>
-                    </div>
-                    <div>
-                        <label for="amount" class="block text-sm font-medium text-gray-700">금액</label>
-                        <input type="number" id="amount" name="amount" class="mt-1 w-full p-2 border border-gray-300 rounded-lg" placeholder="예: 9000" required>
-                    </div>
-                    <button type="submit" class="w-full bg-indigo-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-indigo-700 transition">
-                        <i class="fas fa-save mr-2"></i> 저장하기
-                    </button>
-                </form>
-            </aside>
-            <main class="lg:col-span-3 bg-white p-6 rounded-2xl shadow-lg">
-                <h3 class="text-xl font-bold text-gray-800 mb-4">이번 달 지출 내역</h3>
-                <div class="space-y-2">
-                    {% for expense in expenses %}
-                    <div class="flex items-center p-3 border-b hover:bg-gray-50 rounded-lg group">
-                        <div class="text-center w-16">
-                            <p class="font-bold">{{ expense.expense_date.strftime('%m/%d') }}</p>
-                            <p class="text-xs text-gray-500">{{ ['월', '화', '수', '목', '금', '토', '일'][expense.expense_date.weekday()] }}</p>
-                        </div>
-                        <div class="ml-4 flex-grow">
-                            <p class="font-semibold text-gray-800">{{ expense.item }}</p>
-                            <p class="text-sm text-gray-500">{{ expense.category }}</p>
-                        </div>
-                        <div class="text-right">
-                            <p class="font-semibold text-red-600">- {{ "{:,.0f}".format(expense.amount) }} 원</p>
-                        </div>
-                        <div class="ml-2">
-                            <form action="/delete_ledger_expense/{{ expense.id }}" method="post" onsubmit="return confirm('이 항목을 정말로 삭제하시겠습니까?');">
-                                <input type="hidden" name="expense_id" value="{{ expense.id }}">
-                                <button type="submit" class="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <i class="fas fa-trash-alt"></i>
-                                </button>
-                            </form>
-                        </div>
-                    </div>
-                    {% else %}
-                    <p class="text-gray-500 text-center py-8">이번 달 지출 내역이 없습니다.</p>
-                    {% endfor %}
-                </div>
-            </main>
-        </div>
-        <section class="mt-8 bg-white p-6 rounded-2xl shadow-lg">
-            <h3 class="text-xl font-bold text-gray-800 mb-4">카테고리별 지출 비율</h3>
-            <div class="max-w-md mx-auto">
-                <canvas id="categoryPieChart"></canvas>
+            <div>
+                <label for="item" class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">항목명</label>
+                <input type="text" id="item" name="item" class="form-input" placeholder="예: 스타벅스 커피, 주유" required>
             </div>
-        </section>
+            <div>
+                <label for="amount" class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">금액 (원)</label>
+                <input type="number" id="amount" name="amount" class="form-input font-bold" placeholder="예: 9000" required>
+            </div>
+            <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl transition-colors shadow-lg shadow-blue-500/30 text-base mt-2">
+                지출 저장하기
+            </button>
+        </form>
     </div>
 
-    <div id="budget-modal" class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-white p-6 rounded-2xl shadow-xl w-full max-w-sm">
-            <h3 class="text-xl font-bold text-gray-800 mb-4">{{ current_month_display }} 예산 수정</h3>
-            <form action="/set_budget" method="post">
-                <input type="hidden" name="month" value="{{ current_month_display[:4]}}-{{ current_month_display[6:8] }}">
-                <div>
-                    <label for="budget_amount" class="block text-sm font-medium text-gray-700">새 예산 금액</label>
-                    <input type="number" name="amount" id="budget_amount" value="{{ budget }}" class="mt-1 w-full p-2 border border-gray-300 rounded-lg" required>
-                </div>
-                <div class="mt-4 flex justify-end space-x-2">
-                    <button type="button" id="close-budget-modal-btn" class="bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded-lg hover:bg-gray-300">취소</button>
-                    <button type="submit" class="bg-indigo-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-indigo-700">저장</button>
-                </div>
-            </form>
+    <div class="lg:col-span-3 bg-white p-8 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 flex flex-col">
+        <h3 class="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2">
+            <div class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-500 flex items-center justify-center">
+                <i class="fa-solid fa-chart-pie"></i>
+            </div>
+            카테고리별 지출 비율
+        </h3>
+        
+        <div class="relative flex-grow flex items-center justify-center min-h-[300px]">
+            <canvas id="categoryPieChart"></canvas>
+            <div id="no-chart-data" class="absolute inset-0 flex flex-col items-center justify-center text-slate-400 hidden bg-white rounded-xl">
+                <i class="fa-solid fa-chart-pie text-5xl mb-3 opacity-30"></i>
+                <p class="font-medium text-sm">기록된 지출 데이터가 없습니다.</p>
+            </div>
         </div>
     </div>
+</div>
 
-    <script>
-        document.getElementById('expense_date').valueAsDate = new Date();
-        document.addEventListener('DOMContentLoaded', () => {
-            Chart.register(ChartDataLabels);
+<div class="bg-white rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 overflow-hidden mb-10">
+    <div class="p-8 border-b border-slate-50 bg-white flex justify-between items-center">
+        <h3 class="text-xl font-extrabold text-slate-800 flex items-center gap-3">
+            <div class="w-2 h-6 bg-rose-500 rounded-full"></div> 
+            이번 달 지출 상세 내역
+        </h3>
+    </div>
+    
+    <div class="overflow-x-auto p-2">
+        <table class="w-full text-left border-collapse">
+            <thead>
+                <tr class="text-xs text-slate-400 uppercase tracking-wider">
+                    <th class="px-6 py-5 font-bold border-b border-slate-100 text-center">날짜</th>
+                    <th class="px-6 py-5 font-bold border-b border-slate-100">항목명 / 카테고리</th>
+                    <th class="px-6 py-5 font-bold border-b border-slate-100 text-right">금액</th>
+                    <th class="px-6 py-5 font-bold border-b border-slate-100 text-center w-24">관리</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-50">
+                {% for expense in expenses %}
+                <tr class="transition-colors duration-200 hover:bg-slate-50/80 group">
+                    <td class="px-6 py-4 text-center">
+                        <div class="font-bold text-slate-700">{{ expense.expense_date.strftime('%m/%d') }}</div>
+                        <div class="text-[10px] text-slate-400 font-bold mt-0.5 bg-slate-100 rounded inline-block px-1.5 py-0.5">{{ ['월', '화', '수', '목', '금', '토', '일'][expense.expense_date.weekday()] }}</div>
+                    </td>
+                    <td class="px-6 py-4">
+                        <div class="font-bold text-slate-800 text-base group-hover:text-blue-600 transition-colors">{{ expense.item }}</div>
+                        <div class="mt-1"><span class="bg-slate-100 text-slate-500 text-xs font-bold px-2.5 py-1 rounded-md border border-slate-200/60">{{ expense.category }}</span></div>
+                    </td>
+                    <td class="px-6 py-4 text-right">
+                        <span class="font-extrabold text-rose-500 text-lg tracking-tight">
+                            - ₩ {{ "{:,.0f}".format(expense.amount) }}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 text-center">
+                        <form action="/delete_ledger_expense/{{ expense.id }}" method="post" class="inline-block m-0" onsubmit="return confirm('이 항목을 정말로 삭제하시겠습니까?');">
+                            <input type="hidden" name="expense_id" value="{{ expense.id }}">
+                            <button type="submit" class="w-8 h-8 rounded-lg bg-slate-50 text-slate-400 hover:bg-rose-50 hover:text-rose-600 inline-flex items-center justify-center transition-colors border border-slate-100" title="삭제">
+                                <i class="fa-solid fa-trash text-sm"></i>
+                            </button>
+                        </form>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="4" class="px-6 py-16 text-center text-slate-400">
+                        <i class="fa-solid fa-receipt text-3xl mb-3 opacity-30 block"></i>
+                        이번 달 등록된 지출 내역이 없습니다.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
 
-            let categoryChartInstance = null;
-            let chartData = {};
-            try {
-                chartData = JSON.parse('{{ chart_data | default({}) | tojson | safe }}');
-            } catch (e) {
-                console.error("Error parsing chart data:", e);
-            }
-            
-            console.log('Chart Data:', chartData);
+<div id="budget-modal" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 hidden z-50 animate-fade-in-up">
+    <div class="bg-white p-8 rounded-[2rem] shadow-2xl w-full max-w-sm border border-slate-100 relative">
+        <h3 class="text-xl font-extrabold text-slate-800 mb-6 flex items-center gap-2">
+            <i class="fa-solid fa-gear text-blue-500"></i> {{ current_month_display }} 예산 수정
+        </h3>
+        
+        <form action="/set_budget" method="post">
+            <input type="hidden" name="month" value="{{ current_month_display[:4]}}-{{ current_month_display[6:8] }}">
+            <div class="mb-8">
+                <label for="budget_amount" class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">새 예산 금액 (원)</label>
+                <input type="number" name="amount" id="budget_amount" value="{{ budget }}" class="form-input text-lg font-bold text-blue-600" required autofocus>
+            </div>
+            <div class="flex justify-end gap-3">
+                <button type="button" id="close-budget-modal-btn" class="flex-1 bg-slate-100 text-slate-600 font-bold py-3.5 rounded-xl hover:bg-slate-200 transition-colors">
+                    취소
+                </button>
+                <button type="submit" class="flex-1 bg-blue-600 text-white font-bold py-3.5 rounded-xl hover:bg-blue-700 transition-colors shadow-lg shadow-blue-500/30">
+                    저장하기
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
 
-            function updateChart(data) {
-                if (categoryChartInstance) {
-                    categoryChartInstance.destroy();
-                }
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // 1. 날짜 기본값 설정
+    document.getElementById('expense_date').valueAsDate = new Date();
 
-                if (Object.keys(data).length > 0) {
-                    document.getElementById('categoryPieChart').style.display = 'block';
+    // 2. 예산 수정 모달 제어
+    const budgetModal = document.getElementById('budget-modal');
+    const editBudgetBtn = document.getElementById('edit-budget-btn');
+    const closeBudgetModalBtn = document.getElementById('close-budget-modal-btn');
 
-                    const totalAmount = Object.values(data).reduce((sum, value) => sum + value, 0);
+    if(editBudgetBtn) {
+        editBudgetBtn.addEventListener('click', () => {
+            budgetModal.classList.remove('hidden');
+        });
+    }
 
-                    const chartConfig = {
-                        type: 'pie',
-                        data: {
-                            labels: Object.keys(data),
-                            datasets: [{
-                                data: Object.values(data),
-                                backgroundColor: [
-                                    '#AEC6CF', '#77DD77', '#FDFD96', '#FF6961', '#B39EB5', '#FFC0CB',
-                                    '#ADD8E6', '#90EE90', '#FFFFE0', '#F08080', '#DDA0DD', '#F08080'
-                                ],
-                                hoverOffset: 4
-                            }]
+    if(closeBudgetModalBtn) {
+        closeBudgetModalBtn.addEventListener('click', () => {
+            budgetModal.classList.add('hidden');
+        });
+    }
+
+    // 3. 카테고리별 원형(Pie) 차트 렌더링 (기존 로직 유지, 디자인 업그레이드)
+    Chart.register(ChartDataLabels);
+    let categoryChartInstance = null;
+    let chartData = {};
+    
+    try {
+        chartData = JSON.parse('{{ chart_data | default({}) | tojson | safe }}');
+    } catch (e) {
+        console.error("Error parsing chart data:", e);
+    }
+
+    const chartCanvas = document.getElementById('categoryPieChart');
+    const noDataMsg = document.getElementById('no-chart-data');
+
+    function updateChart(data) {
+        if (categoryChartInstance) {
+            categoryChartInstance.destroy();
+        }
+
+        if (data && Object.keys(data).length > 0) {
+            chartCanvas.style.display = 'block';
+            noDataMsg.style.display = 'none';
+
+            const totalAmount = Object.values(data).reduce((sum, value) => sum + value, 0);
+
+            const chartConfig = {
+                type: 'pie',
+                data: {
+                    labels: Object.keys(data),
+                    datasets: [{
+                        data: Object.values(data),
+                        backgroundColor: [
+                            '#3b82f6', '#10b981', '#f59e0b', '#ef4444', 
+                            '#8b5cf6', '#ec4899', '#6366f1', '#14b8a6',
+                            '#64748b', '#0ea5e9', '#f43f5e', '#d946ef'
+                        ],
+                        borderWidth: 2,
+                        borderColor: '#ffffff',
+                        hoverOffset: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    layout: { padding: 10 },
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { usePointStyle: true, padding: 20, font: { size: 13, family: "'Noto Sans KR', sans-serif" } }
                         },
-                        options: {
-                            responsive: true,
-                            maintainAspectRatio: false,
-                            layout: { padding: 40 },
-                            plugins: {
-                                legend: {
-                                    position: 'left',
-                                    labels: {
-                                        font: {
-                                            size: 14
-                                        },
-                                        generateLabels: function(chart) {
-                                            const data = chart.data;
-                                            if (data.labels.length && data.datasets.length) {
-                                                const total = data.datasets[0].data.reduce((sum, value) => sum + value, 0);
-                                                return data.labels.map(function(label, i) {
-                                                    const value = data.datasets[0].data[i];
-                                                    const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
-                                                    return {
-                                                        text: `${label}: ${percentage}%`,
-                                                        fillStyle: data.datasets[0].backgroundColor[i],
-                                                        strokeStyle: data.datasets[0].borderColor,
-                                                        lineWidth: data.datasets[0].borderWidth,
-                                                        hidden: chart.getDatasetMeta(0).data[i].hidden
-                                                    };
-                                                });
-                                            }
-                                            return [];
-                                        }
-                                    }
-                                },
-                                datalabels: {
-                                    display: true,
-                                    formatter: (value, ctx) => {
-                                        const percentage = (value / totalAmount * 100).toFixed(1) + '%';
-                                        return percentage;
-                                    },
-                                    color: '#000',
-                                    font: {
-                                        weight: 'bold'
-                                    }
+                        datalabels: {
+                            color: '#ffffff',
+                            font: { weight: 'bold', size: 14 },
+                            formatter: (value) => {
+                                const percentage = ((value / totalAmount) * 100).toFixed(0);
+                                return percentage > 3 ? percentage + '%' : ''; // 3% 이상만 표시
+                            }
+                        },
+                        tooltip: {
+                            backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                            padding: 12,
+                            titleFont: { size: 13 },
+                            bodyFont: { size: 14, weight: 'bold' },
+                            callbacks: {
+                                label: function(context) {
+                                    const val = context.raw;
+                                    const pct = ((val / totalAmount) * 100).toFixed(1);
+                                    return ` ${context.label}: ₩${val.toLocaleString('ko-KR')} (${pct}%)`;
                                 }
                             }
                         }
-                    };
-
-                    const ctx = document.getElementById('categoryPieChart').getContext('2d');
-                    categoryChartInstance = new Chart(ctx, chartConfig);
-                } else {
-                    document.getElementById('categoryPieChart').style.display = 'none';
+                    }
                 }
-            }
-            
-            updateChart(chartData);
-
-            const budgetModal = document.getElementById('budget-modal');
-            const editBudgetBtn = document.getElementById('edit-budget-btn');
-            const closeBudgetModalBtn = document.getElementById('close-budget-modal-btn');
-
-            if(editBudgetBtn) {
-                editBudgetBtn.addEventListener('click', () => {
-                    budgetModal.classList.remove('hidden');
-                });
-            }
-
-            if(closeBudgetModalBtn) {
-                closeBudgetModalBtn.addEventListener('click', () => {
-                    budgetModal.classList.add('hidden');
-                });
-            }
-        });
-        
-    </script>
-</body>
-</html>
+            };
+            categoryChartInstance = new Chart(chartCanvas.getContext('2d'), chartConfig);
+        } else {
+            chartCanvas.style.display = 'none';
+            noDataMsg.style.display = 'flex';
+        }
+    }
+    
+    updateChart(chartData);
+});
+</script>
+{% endblock %}

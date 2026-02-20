@@ -1,0 +1,99 @@
+{% extends "layout.html" %}
+
+{% block title %}전체 알림 관리 - J&D Asset{% endblock %}
+
+{% block content %}
+<div class="mb-8 flex justify-between items-end animate-fade-in-up">
+    <div>
+        <h1 class="text-3xl font-bold text-slate-800 tracking-tight flex items-center gap-3">
+            <i class="fa-regular fa-bell text-orange-500"></i> 전체 알림 관리
+        </h1>
+        <p class="text-slate-500 mt-2 font-medium">등록된 모든 알림(일정)을 확인하고 수정할 수 있습니다.</p>
+    </div>
+    <a href="/add_task_form" class="inline-flex items-center px-5 py-2.5 rounded-xl bg-orange-500 text-white font-bold hover:bg-orange-600 transition-colors shadow-lg shadow-orange-500/30">
+        <i class="fa-solid fa-plus mr-2"></i> 새 알림 추가
+    </a>
+</div>
+
+<div class="bg-white rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 overflow-hidden mb-10">
+    <div class="p-8 border-b border-slate-50 flex justify-between items-center bg-white">
+        <h3 class="text-xl font-extrabold text-slate-800 flex items-center gap-3">
+            <div class="w-2 h-6 bg-orange-500 rounded-full"></div>
+            모든 알림 목록
+        </h3>
+    </div>
+    
+    <div class="overflow-x-auto p-2">
+        <table class="w-full text-left border-collapse">
+            <thead>
+                <tr class="text-xs text-slate-400 uppercase tracking-wider">
+                    <th class="px-8 py-5 font-bold border-b border-slate-100">항목명</th>
+                    <th class="px-4 py-5 font-bold border-b border-slate-100 hidden md:table-cell">모델명</th>
+                    <th class="px-4 py-5 font-bold border-b border-slate-100">예정일</th>
+                    <th class="px-8 py-5 font-bold border-b border-slate-100 hidden sm:table-cell">수신 이메일</th>
+                    <th class="px-6 py-5 font-bold border-b border-slate-100 text-center">관리</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-50">
+                {% for task in tasks %}
+                <tr class="transition-colors duration-200 hover:bg-slate-50/80 group">
+                    <td class="px-8 py-5">
+                        <div class="font-bold text-slate-800 text-base">{{ task.item_name }}</div>
+                    </td>
+                    <td class="px-4 py-5 hidden md:table-cell text-slate-600 font-medium">
+                        {{ task.model_name if task.model_name else '-' }}
+                    </td>
+                    <td class="px-4 py-5">
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-slate-100 text-slate-700 border border-slate-200/60 shadow-sm task-date" data-date="{{ task.due_date }}">
+                            <i class="fa-regular fa-calendar mr-1.5"></i> <span class="date-text">{{ task.due_date }}</span>
+                        </span>
+                    </td>
+                    <td class="px-8 py-5 hidden sm:table-cell text-slate-500 text-sm">
+                        {{ task.email if task.email else '-' }}
+                    </td>
+                    <td class="px-6 py-5">
+                        <div class="flex items-center justify-center gap-2">
+                            <form action="/complete_task" method="POST" class="inline-block m-0" onsubmit="return confirm('이 알림을 완료 처리(삭제) 하시겠습니까?');">
+                                <input type="hidden" name="task_id" value="{{ task.id }}">
+                                <button type="submit" class="w-8 h-8 rounded-lg bg-slate-50 text-emerald-500 hover:bg-emerald-50 hover:text-emerald-600 inline-flex items-center justify-center transition-colors border border-slate-100" title="완료(삭제)">
+                                    <i class="fa-solid fa-check text-sm"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="5" class="px-8 py-20 text-center">
+                        <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-slate-50 text-slate-300 mb-4 shadow-inner">
+                            <i class="fa-solid fa-bell-slash text-2xl"></i>
+                        </div>
+                        <p class="text-slate-400 text-sm font-medium">등록된 알림이 없습니다.</p>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    // 날짜가 지났으면 붉은색 글씨로 [만료] 표시를 달아주는 스크립트
+    document.addEventListener('DOMContentLoaded', () => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        document.querySelectorAll('.task-date').forEach(el => {
+            const dateStr = el.getAttribute('data-date');
+            if (dateStr) {
+                const taskDate = new Date(dateStr);
+                if (taskDate < today) {
+                    el.classList.remove('bg-slate-100', 'text-slate-700', 'border-slate-200/60');
+                    el.classList.add('bg-red-50', 'text-red-600', 'border-red-200');
+                    el.querySelector('.date-text').innerHTML += ' <span class="ml-1 text-[10px] text-red-500">(만료)</span>';
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

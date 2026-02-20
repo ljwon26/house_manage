@@ -1,347 +1,379 @@
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>가계부 관리</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f3f4f6;
-        }
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 2rem;
-        }
-        .form-group {
-            margin-bottom: 1.5rem;
-        }
-        .form-group label {
-            font-weight: 500;
-            color: #4b5563;
-        }
-        .form-group input, .form-group select {
-            width: 100%;
-            padding: 0.75rem;
-            border-radius: 0.5rem;
-            border: 1px solid #d1d5db;
-            transition: all 0.2s;
-        }
-        .form-group input:focus, .form-group select:focus {
-            outline: none;
-            border-color: #4f46e5;
-            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.2);
-        }
-        /* JavaScript로 제어될 숨김 클래스 */
-        .hidden-form {
-            display: none;
-        }
-    </style>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
-</head>
-<body>
-    <div class="container">
-        <a href="/dashboard" class="inline-block mb-6 text-gray-600 hover:text-indigo-600 font-semibold transition-colors duration-200">
-            &larr; 대시보드로 돌아가기
-        </a>
+{% extends "layout.html" %}
 
-        <section class="mb-8 bg-white p-6 rounded-lg shadow-md">
-            <h2 class="text-xl font-bold mb-4 text-gray-800">총 수입 대비 카테고리별 지출 비율</h2>
-            <div class="flex flex-col md:flex-row items-center gap-8">
-                <div class="w-full md:w-1/2 flex flex-col items-center">
-                    <div class="relative max-w-md mx-auto h-[300px] w-full">
-                        <canvas id="totalExpenseChart"></canvas>
-                        <p id="totalExpenseChart-no-data" class="text-center text-gray-500 py-10" style="display:none;">지출 데이터가 없습니다.</p>
-                    </div>
-                </div>
-                <div class="w-full md:w-1/2 text-gray-800">
-                    <p class="mb-2">총 수입: <span class="font-bold text-green-600">{{ "{:,.0f}".format(total_income) }}</span>원</p>
-                    <p class="mb-2">총 지출: <span class="font-bold text-red-600">{{ "{:,.0f}".format(total_expense) }}</span>원</p>
-                    <p>남은 금액: <span class="font-bold text-indigo-600">{{ "{:,.0f}".format(balance) }}</span>원</p>
-                </div>
+{% block title %}가계부 관리 - J&D Asset{% endblock %}
+
+{% block content %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+
+<style>
+    /* 입력 폼 전용 고급 스타일 */
+    .form-input {
+        width: 100%; padding: 0.875rem 1rem;
+        background-color: #f8fafc; border: 1px solid #e2e8f0;
+        border-radius: 0.75rem; color: #334155; font-weight: 500;
+        transition: all 0.2s ease-in-out;
+    }
+    .form-input:focus {
+        outline: none; border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+    }
+    /* 카드 호버(마우스 오버) 애니메이션 */
+    .hover-lift {
+        transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease;
+    }
+    .hover-lift:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 24px -8px rgba(0, 0, 0, 0.08);
+    }
+    /* 버튼 클릭 효과 */
+    .btn-active { transform: scale(0.98); }
+</style>
+
+<div class="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4 animate-fade-in-up">
+    <div>
+        <h1 class="text-3xl font-bold text-slate-800 tracking-tight flex items-center gap-3">
+            <div class="w-10 h-10 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center shadow-sm border border-blue-100">
+                <i class="fa-solid fa-wallet text-xl"></i>
             </div>
-        </section>
+            지출 및 수입 관리
+        </h1>
+        <p class="text-slate-500 mt-2 font-medium">이번 달의 자금 흐름과 소비 패턴을 분석합니다.</p>
+    </div>
+</div>
+
+<div class="bg-white p-8 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 mb-10">
+    <h2 class="text-xl font-extrabold text-slate-800 mb-6 flex items-center gap-3">
+        <div class="w-2 h-6 bg-blue-500 rounded-full"></div> 
+        카테고리별 지출 비율
+    </h2>
+    
+    <div class="relative w-full h-[320px] flex items-center justify-center">
+        <canvas id="expensePieChart"></canvas>
         
-        <div class="space-y-6">
-            <div class="bg-white p-6 rounded-lg shadow-md">
-                <div class="flex justify-between items-center cursor-pointer" id="toggle-expense">
-                    <h2 class="text-xl font-bold text-gray-800">지출 추가</h2>
-                    <button class="text-indigo-600 text-2xl font-bold" id="expense-toggle-icon">+</button>
-                </div>
-                <form id="expense-form" action="/add_expense" method="post" class="mt-4 hidden-form">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div class="form-group">
-                            <label for="expense_type">지출 유형</label>
-                            <select id="expense_type" name="expense_type" required>
-                                <option value="고정적">고정적 지출</option>
-                                <option value="변동적">변동적 지출</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="category">카테고리</label>
-                            <select id="category" name="category" required>
-                                <option value="주거/통신">주거/통신</option>
-                                <option value="저축">저축</option>
-                                <option value="식비">식비</option>
-                                <option value="개인용돈">개인용돈</option>
-                                <option value="생활용품">생활용품</option>
-                                <option value="교통비">교통비</option>
-                                <option value="문화/여가">문화/여가</option>
-                                <option value="기타">기타</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label for="item">항목</label>
-                        <input type="text" id="item" name="item" required placeholder="예: 커피, 전기세">
-                    </div>
-                    <div class="form-group">
-                        <label for="amount">금액</label>
-                        <input type="number" id="amount" name="amount" required placeholder="예: 4500">
-                    </div>
-                    <div class="form-group">
-                        <label for="notes">메모</label>
-                        <input type="text" id="notes" name="notes" placeholder="예: 친구와 점심">
-                    </div>
-                    <div class="flex justify-end">
-                        <button type="submit" class="bg-indigo-600 text-white font-semibold py-2 px-6 rounded-lg shadow-md hover:bg-indigo-700 transition-colors duration-200">
-                            지출 추가
-                        </button>
-                    </div>
-                </form>
+        <div id="no-chart-data" class="absolute inset-0 flex flex-col items-center justify-center text-slate-400 hidden bg-white/80 backdrop-blur-sm rounded-xl">
+            <div class="w-16 h-16 rounded-full bg-slate-50 flex items-center justify-center mb-3 shadow-inner">
+                <i class="fa-solid fa-chart-pie text-2xl opacity-50"></i>
             </div>
+            <p class="font-medium text-sm">이번 달 기록된 지출 데이터가 없습니다.</p>
+        </div>
+    </div>
+</div>
 
-            <div class="bg-white p-6 rounded-lg shadow-md">
-                <div class="flex justify-between items-center cursor-pointer" id="toggle-income">
-                    <h2 class="text-xl font-bold text-gray-800">수입 추가</h2>
-                    <button class="text-green-600 text-2xl font-bold" id="income-toggle-icon">+</button>
-                </div>
-                <form action="/add_income" method="post" id="income-form" class="mt-4 hidden-form">
-                    <div class="form-group">
-                        <label for="income_type">수입 유형</label>
-                        <select id="income_type" name="income_type" required>
-                            <option value="월급(재원)">월급(재원)</option>
-                            <option value="월급(다슬)">월급(다슬)</option>
-                            <option value="기타수입">기타 수입</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="income_amount">금액</label>
-                        <input type="number" id="income_amount" name="amount" required placeholder="예: 3000000">
-                    </div>
-                    <div class="flex justify-end mt-4">
-                        <button type="submit" class="bg-green-600 text-white font-semibold py-2 px-6 rounded-lg shadow-md hover:bg-green-700 transition-colors duration-200">
-                            수입 추가
-                        </button>
-                    </div>
-                </form>
+<div class="mb-10">
+    <div class="flex flex-col sm:flex-row gap-4 mb-6">
+        <button id="btn-toggle-expense" class="flex-1 bg-white hover:bg-rose-50 border border-slate-200 hover:border-rose-200 text-slate-700 hover:text-rose-600 font-bold py-4 rounded-[1.5rem] shadow-sm hover:shadow-md transition-all flex items-center justify-center gap-3 text-lg group active:scale-[0.98]">
+            <div class="w-10 h-10 rounded-full bg-slate-50 group-hover:bg-rose-500 text-slate-400 group-hover:text-white flex items-center justify-center transition-colors shadow-inner">
+                <i class="fa-solid fa-minus"></i>
             </div>
+            지출 내역 추가
+        </button>
+        
+        <button id="btn-toggle-income" class="flex-1 bg-white hover:bg-emerald-50 border border-slate-200 hover:border-emerald-200 text-slate-700 hover:text-emerald-600 font-bold py-4 rounded-[1.5rem] shadow-sm hover:shadow-md transition-all flex items-center justify-center gap-3 text-lg group active:scale-[0.98]">
+            <div class="w-10 h-10 rounded-full bg-slate-50 group-hover:bg-emerald-500 text-slate-400 group-hover:text-white flex items-center justify-center transition-colors shadow-inner">
+                <i class="fa-solid fa-plus"></i>
+            </div>
+            수입 내역 추가
+        </button>
+    </div>
+
+    <div id="form-expense-container" class="hidden bg-white p-8 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-rose-100 mb-6 relative overflow-hidden">
+        <div class="absolute top-0 left-0 w-full h-1 bg-rose-500"></div>
+        <h3 class="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2">
+            <i class="fa-solid fa-receipt text-rose-500"></i> 새로운 지출 기록
+        </h3>
+        
+        <form action="/add_expense" method="post">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 mb-5">
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-2">날짜</label>
+                    <input type="date" name="expense_date" class="form-input" required id="default-expense-date">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-2">지출 유형</label>
+                    <select name="expense_type" class="form-input" required>
+                        <option value="고정적">고정적 지출</option>
+                        <option value="변동적" selected>변동적 지출</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-2">카테고리</label>
+                    <select name="category" class="form-input" required>
+                        <option value="주거/통신">주거/통신</option>
+                        <option value="저축">저축</option>
+                        <option value="식비" selected>식비</option>
+                        <option value="개인용돈">개인용돈</option>
+                        <option value="생활용품">생활용품</option>
+                        <option value="교통비">교통비</option>
+                        <option value="문화/여가">문화/여가</option>
+                        <option value="기타">기타</option>
+                    </select>
+                </div>
+                <div class="lg:col-span-2">
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-2">항목명</label>
+                    <input type="text" name="item" class="form-input" required placeholder="예: 점심 식대, 통신비">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-2">금액 (원)</label>
+                    <input type="number" name="amount" class="form-input font-bold" required placeholder="0">
+                </div>
+            </div>
+            <div class="mb-6">
+                <label class="block text-xs font-bold text-slate-500 uppercase mb-2">메모 (선택)</label>
+                <input type="text" name="notes" class="form-input" placeholder="추가 설명이 필요하다면 적어주세요">
+            </div>
+            <button type="submit" class="w-full bg-rose-500 hover:bg-rose-600 text-white font-bold py-4 rounded-xl transition-colors shadow-lg shadow-rose-500/30 text-lg">
+                지출 등록하기
+            </button>
+        </form>
+    </div>
+
+    <div id="form-income-container" class="hidden bg-white p-8 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.06)] border border-emerald-100 mb-6 relative overflow-hidden">
+        <div class="absolute top-0 left-0 w-full h-1 bg-emerald-500"></div>
+        <h3 class="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2">
+            <i class="fa-solid fa-sack-dollar text-emerald-500"></i> 새로운 수입 기록
+        </h3>
+        
+        <form action="/add_income" method="post">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-6">
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-2">날짜</label>
+                    <input type="date" name="income_date" class="form-input" required id="default-income-date">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-2">수입 분류</label>
+                    <select name="income_type" class="form-input" required>
+                        <option value="월급(재원)">월급(재원)</option>
+                        <option value="월급(다슬)">월급(다슬)</option>
+                        <option value="기타수입">기타 수입</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-2">금액 (원)</label>
+                    <input type="number" name="amount" class="form-input font-bold" required placeholder="0">
+                </div>
+            </div>
+            <button type="submit" class="w-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-4 rounded-xl transition-colors shadow-lg shadow-emerald-500/30 text-lg">
+                수입 등록하기
+            </button>
+        </form>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 gap-8 mb-10">
+        <div class="bg-white rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 overflow-hidden">
+        <div class="p-8 border-b border-slate-50 bg-white flex justify-between items-center">
+            <h3 class="text-xl font-extrabold text-slate-800 flex items-center gap-3">
+                <div class="w-2 h-6 bg-emerald-500 rounded-full"></div> 
+                상세 수입 내역
+            </h3>
         </div>
         
-        <div class="mt-8 bg-white p-6 rounded-lg shadow-md">
-            <h2 class="text-xl font-bold mb-4 text-gray-800">수입 내역</h2>
-            <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">날짜</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">유형</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">금액</th>
-                            <th scope="col" class="relative px-6 py-3"><span class="sr-only">Actions</span></th>
-                        </tr>
-                    </thead>
-                    <tbody class="bg-white divide-y divide-gray-200">
-                        {% for income in incomes %}
-                        <tr>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ income.income_date.strftime('%Y-%m-%d') }}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ income.income_type }}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ "{:,.0f}".format(income.amount) }} 원</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                <a href="/edit_income/{{ income.id }}" class="text-indigo-600 hover:text-indigo-900 mr-4">수정</a>
-                                <form action="/delete_income" method="post" class="inline" onsubmit="return confirm('정말로 이 항목을 삭제하시겠습니까?');">
+        <div class="overflow-x-auto p-2">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="text-xs text-slate-400 uppercase tracking-wider">
+                        <th class="px-6 py-5 font-bold border-b border-slate-100">날짜</th>
+                        <th class="px-6 py-5 font-bold border-b border-slate-100">분류 (항목명)</th>
+                        <th class="px-6 py-5 font-bold border-b border-slate-100 text-right">금액</th>
+                        <th class="px-6 py-5 font-bold border-b border-slate-100 text-center">관리</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-50">
+                    {% for income in incomes %}
+                    <tr class="transition-colors duration-200 hover:bg-slate-50/80 group">
+                        <td class="px-6 py-5 text-sm text-slate-500 font-medium whitespace-nowrap">
+                            {{ income.income_date.strftime('%Y-%m-%d') }}
+                        </td>
+                        <td class="px-6 py-5">
+                            <span class="font-bold text-slate-800 text-base group-hover:text-emerald-600 transition-colors">{{ income.income_type }}</span>
+                        </td>
+                        <td class="px-6 py-5 text-right font-extrabold text-emerald-500 text-lg tracking-tight">
+                            + ₩ {{ "{:,.0f}".format(income.amount) }}
+                        </td>
+                        <td class="px-6 py-5">
+                            <div class="flex items-center justify-center gap-2">
+                                <a href="/edit_income/{{ income.id }}" class="w-8 h-8 rounded-lg bg-slate-50 text-slate-400 hover:bg-blue-50 hover:text-blue-600 inline-flex items-center justify-center transition-colors border border-slate-100" title="수정">
+                                    <i class="fa-solid fa-pen text-sm"></i>
+                                </a>
+                                <form action="/delete_income" method="post" class="inline-block m-0" onsubmit="return confirm('이 수입 항목을 정말 삭제하시겠습니까?');">
                                     <input type="hidden" name="income_id" value="{{ income.id }}">
-                                    <button type="submit" class="text-red-600 hover:text-red-900">삭제</button>
+                                    <button type="submit" class="w-8 h-8 rounded-lg bg-slate-50 text-slate-400 hover:bg-red-50 hover:text-red-600 inline-flex items-center justify-center transition-colors border border-slate-100" title="삭제">
+                                        <i class="fa-solid fa-trash text-sm"></i>
+                                    </button>
                                 </form>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="4" class="px-6 py-16 text-center text-slate-400">
+                            <i class="fa-solid fa-sack-dollar text-3xl mb-3 opacity-30 block"></i>
+                            등록된 수입 내역이 없습니다.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
-
-        <div class="mt-8 bg-white p-6 rounded-lg shadow-md">
-            <h2 class="text-xl font-bold mb-4 text-gray-800">지출 내역</h2>
-            <div class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gray-50">
-                        <tr>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">날짜</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">유형</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">카테고리</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">항목</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">금액</th>
-                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">메모</th>
-                            <th scope="col" class="relative px-6 py-3"><span class="sr-only">Actions</span></th>
-                        </tr>
-                    </thead>
-                    <tbody class="bg-white divide-y divide-gray-200">
-                        {% for expense in expenses %}
-                        <tr>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ expense.expense_date.strftime('%Y-%m-%d') }}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ expense.expense_type }}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ expense.category }}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ expense.item }}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ "{:,.0f}".format(expense.amount) }} 원</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{{ expense.notes or '' }}</td>
-                            <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                <a href="/edit_expense/{{ expense.id }}" class="text-indigo-600 hover:text-indigo-900 mr-4">수정</a>
-                                <form action="/delete_expense" method="post" class="inline" onsubmit="return confirm('정말로 이 항목을 삭제하시겠습니까?');">
+    </div>
+    
+    <div class="bg-white rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 overflow-hidden">
+        <div class="p-8 border-b border-slate-50 bg-white flex justify-between items-center">
+            <h3 class="text-xl font-extrabold text-slate-800 flex items-center gap-3">
+                <div class="w-2 h-6 bg-rose-500 rounded-full"></div> 
+                상세 지출 내역
+            </h3>
+        </div>
+        
+        <div class="overflow-x-auto p-2">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="text-xs text-slate-400 uppercase tracking-wider">
+                        <th class="px-6 py-5 font-bold border-b border-slate-100">날짜</th>
+                        <th class="px-6 py-5 font-bold border-b border-slate-100 hidden sm:table-cell">유형</th>
+                        <th class="px-6 py-5 font-bold border-b border-slate-100">카테고리/항목</th>
+                        <th class="px-6 py-5 font-bold border-b border-slate-100 text-right">금액</th>
+                        <th class="px-6 py-5 font-bold border-b border-slate-100 text-center">관리</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-50">
+                    {% for expense in expenses %}
+                    <tr class="transition-colors duration-200 hover:bg-slate-50/80 group">
+                        <td class="px-6 py-5 text-sm text-slate-500 font-medium whitespace-nowrap">
+                            {{ expense.expense_date.strftime('%Y-%m-%d') }}
+                        </td>
+                        <td class="px-6 py-5 hidden sm:table-cell text-sm text-slate-500">
+                            {{ expense.expense_type }}
+                        </td>
+                        <td class="px-6 py-5">
+                            <div class="font-bold text-slate-800 text-base group-hover:text-rose-600 transition-colors">{{ expense.item }}</div>
+                            <div class="mt-1"><span class="bg-slate-100 text-slate-500 text-xs font-bold px-2.5 py-1 rounded-md border border-slate-200/60">{{ expense.category }}</span></div>
+                        </td>
+                        <td class="px-6 py-5 text-right font-extrabold text-slate-800 text-lg tracking-tight">
+                            ₩ {{ "{:,.0f}".format(expense.amount) }}
+                        </td>
+                        <td class="px-6 py-5">
+                            <div class="flex items-center justify-center gap-2">
+                                <a href="/edit_expense/{{ expense.id }}" class="w-8 h-8 rounded-lg bg-slate-50 text-slate-400 hover:bg-blue-50 hover:text-blue-600 inline-flex items-center justify-center transition-colors border border-slate-100" title="수정">
+                                    <i class="fa-solid fa-pen text-sm"></i>
+                                </a>
+                                <form action="/delete_expense" method="post" class="inline-block m-0" onsubmit="return confirm('이 지출 항목을 정말 삭제하시겠습니까?');">
                                     <input type="hidden" name="expense_id" value="{{ expense.id }}">
-                                    <button type="submit" class="text-red-600 hover:text-red-900">삭제</button>
+                                    <button type="submit" class="w-8 h-8 rounded-lg bg-slate-50 text-slate-400 hover:bg-red-50 hover:text-red-600 inline-flex items-center justify-center transition-colors border border-slate-100" title="삭제">
+                                        <i class="fa-solid fa-trash text-sm"></i>
+                                    </button>
                                 </form>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="5" class="px-6 py-16 text-center text-slate-400">
+                            <i class="fa-solid fa-receipt text-3xl mb-3 opacity-30 block"></i>
+                            등록된 지출 내역이 없습니다.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     </div>
 
-    <script>
-    document.addEventListener('DOMContentLoaded', function () {
-        // ▼▼▼ [수정] 차트 렌더링 스크립트 ▼▼▼
-        Chart.register(ChartDataLabels); // 데이터 레이블 플러그인 등록
 
-        // Flask/Jinja2 템플릿으로부터 데이터 가져오기
-        const expenseCategoryTotals = JSON.parse('{{ expense_category_totals | tojson | safe }}');
-        const totalIncome = {{ total_income | default(0) }};
+</div>
 
-        // 파이 차트 생성 함수
-        function createPieChart(canvasId, data, totalIncomeValue) {
-            const chartElement = document.getElementById(canvasId);
-            const noDataElement = document.getElementById(`${canvasId}-no-data`);
-            
-            // 데이터가 있는 경우에만 차트 생성
-            if (data && Object.keys(data).length > 0) {
-                chartElement.style.display = 'block';
-                noDataElement.style.display = 'none';
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    // 1. 오늘 날짜를 입력 폼의 기본값으로 세팅
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('default-expense-date').value = today;
+    document.getElementById('default-income-date').value = today;
 
-                const totalExpense = Object.values(data).reduce((sum, value) => sum + value, 0);
+    // 2. 입력 폼 토글 기능 (하나를 열면 다른 하나는 닫힘)
+    const btnExpense = document.getElementById('btn-toggle-expense');
+    const btnIncome = document.getElementById('btn-toggle-income');
+    const formExpense = document.getElementById('form-expense-container');
+    const formIncome = document.getElementById('form-income-container');
 
-                // [핵심 로직]
-                // 총 수입이 0보다 크면 '총 수입'을, 그렇지 않으면 '총 지출'을 퍼센트 계산의 기준으로 사용합니다.
-                // 이렇게 함으로써 '총 수입 대비 지출 비율'을 정확히 표시할 수 있습니다.
-                const calculationBase = totalIncomeValue > 0 ? totalIncomeValue : totalExpense;
+    btnExpense.addEventListener('click', () => {
+        formIncome.classList.add('hidden');
+        formExpense.classList.toggle('hidden');
+    });
 
-                const chartConfig = {
-                    type: 'pie',
-                    data: {
-                        labels: Object.keys(data),
-                        datasets: [{
-                            data: Object.values(data),
-                            backgroundColor: [
-                                '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF', '#FF9F40',
-                                '#AEC6CF', '#77DD77', '#FDFD96', '#FF6961', '#B39EB5', '#FFC0CB'
-                            ],
-                            hoverOffset: 4
-                        }]
+    btnIncome.addEventListener('click', () => {
+        formExpense.classList.add('hidden');
+        formIncome.classList.toggle('hidden');
+    });
+
+    // 3. 카테고리별 원형(Pie) 차트 렌더링
+    Chart.register(ChartDataLabels);
+    
+    // 파이썬에서 넘겨준 딕셔너리 데이터를 자바스크립트 객체로 파싱
+    const expenseData = JSON.parse('{{ expense_category_totals | tojson | safe }}');
+    const chartCanvas = document.getElementById('expensePieChart');
+    const noDataMsg = document.getElementById('no-chart-data');
+
+    // 데이터가 존재하는지 확인
+    if (expenseData && Object.keys(expenseData).length > 0) {
+        chartCanvas.style.display = 'block';
+        noDataMsg.style.display = 'none';
+
+        const labels = Object.keys(expenseData);
+        const dataValues = Object.values(expenseData);
+        const totalSum = dataValues.reduce((a, b) => a + b, 0);
+
+        new Chart(chartCanvas.getContext('2d'), {
+            type: 'pie', // 도넛이 아닌 꽉 찬 원형(pie) 그래프
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: dataValues,
+                    backgroundColor: [
+                        '#3b82f6', '#10b981', '#f59e0b', '#ef4444', 
+                        '#8b5cf6', '#ec4899', '#6366f1', '#14b8a6'
+                    ],
+                    borderWidth: 2,
+                    borderColor: '#ffffff',
+                    hoverOffset: 8
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                        labels: { usePointStyle: true, padding: 20, font: { size: 13, family: "'Noto Sans KR', sans-serif" } }
                     },
-                    options: {
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: {
-                                position: 'right', // 범례 위치
-                                labels: {
-                                    font: { size: 14 },
-                                    // 범례 텍스트를 '카테고리: 비율%' 형태로 생성
-                                    generateLabels: function(chart) {
-                                        const data = chart.data;
-                                        if (data.labels.length && data.datasets.length) {
-                                            return data.labels.map(function(label, i) {
-                                                const value = data.datasets[0].data[i];
-                                                const percentage = calculationBase > 0 ? ((value / calculationBase) * 100).toFixed(1) : 0;
-                                                return {
-                                                    text: `${label}: ${percentage}%`,
-                                                    fillStyle: data.datasets[0].backgroundColor[i],
-                                                };
-                                            });
-                                        }
-                                        return [];
-                                    }
-                                }
-                            },
-                            // 차트 조각에 직접 퍼센트 표시
-                            datalabels: {
-                                display: true,
-                                formatter: (value, ctx) => {
-                                    const percentage = (value / calculationBase * 100).toFixed(1) + '%';
-                                    return percentage;
-                                },
-                                color: '#000', // 텍스트 색상
-                                font: {
-                                    weight: 'bold',
-                                    size: 14
-                                }
-                            },
-                            tooltip: {
-                                callbacks: {
-                                    // 툴팁에 금액(원)과 비율(%) 함께 표시
-                                    label: function(context) {
-                                        const label = context.label || '';
-                                        const value = context.raw;
-                                        const percentage = (value / calculationBase * 100).toFixed(1);
-                                        const formattedValue = value.toLocaleString('ko-KR');
-                                        return `${label}: ${formattedValue}원 (${percentage}%)`;
-                                    }
-                                }
+                    datalabels: {
+                        color: '#ffffff',
+                        font: { weight: 'bold', size: 14 },
+                        formatter: (value) => {
+                            const percentage = ((value / totalSum) * 100).toFixed(0);
+                            return percentage > 3 ? percentage + '%' : ''; // 3% 이하의 작은 파이는 라벨 생략 (가독성 목적)
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                        padding: 12,
+                        titleFont: { size: 13 },
+                        bodyFont: { size: 14, weight: 'bold' },
+                        callbacks: {
+                            label: function(context) {
+                                const val = context.raw;
+                                const pct = ((val / totalSum) * 100).toFixed(1);
+                                return ` ₩${val.toLocaleString('ko-KR')} (${pct}%)`;
                             }
                         }
                     }
-                };
-
-                // 기존 차트가 있으면 파괴하고 새로 생성 (데이터 업데이트 시 필요)
-                if (window.expenseChartInstance) {
-                    window.expenseChartInstance.destroy();
                 }
-                window.expenseChartInstance = new Chart(chartElement.getContext('2d'), chartConfig);
-
-            } else {
-                // 데이터가 없으면 '데이터 없음' 메시지 표시
-                chartElement.style.display = 'none';
-                noDataElement.style.display = 'block';
             }
-        }
-
-        // 페이지 로드 시 차트 생성
-        createPieChart('totalExpenseChart', expenseCategoryTotals, totalIncome);
-        // ▲▲▲ 여기까지 ▲▲▲
-        
-        // --- 폼 토글 스크립트 (기존과 동일) ---
-        const toggleExpense = document.getElementById('toggle-expense');
-        const expenseForm = document.getElementById('expense-form');
-        const expenseToggleIcon = document.getElementById('expense-toggle-icon');
-
-        const toggleIncome = document.getElementById('toggle-income');
-        const incomeForm = document.getElementById('income-form');
-        const incomeToggleIcon = document.getElementById('income-toggle-icon');
-
-        toggleExpense.addEventListener('click', () => {
-            expenseForm.classList.toggle('hidden-form');
-            expenseToggleIcon.textContent = expenseForm.classList.contains('hidden-form') ? '+' : '-';
         });
-
-        toggleIncome.addEventListener('click', () => {
-            incomeForm.classList.toggle('hidden-form');
-            incomeToggleIcon.textContent = incomeForm.classList.contains('hidden-form') ? '+' : '-';
-        });
-    });
-    </script>
-</body>
-</html>
+    } else {
+        // 데이터가 없을 때
+        chartCanvas.style.display = 'none';
+        noDataMsg.style.display = 'flex';
+    }
+});
+</script>
+{% endblock %}
