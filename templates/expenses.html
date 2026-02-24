@@ -40,7 +40,16 @@
         <p class="text-slate-500 mt-2 font-medium">이번 달의 자금 흐름과 소비 패턴을 분석합니다.</p>
     </div>
 </div>
-
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+    <div class="bg-white p-6 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-emerald-100 flex flex-col justify-center hover-lift">
+        <h6 class="text-emerald-600/70 text-sm font-bold uppercase tracking-wider mb-2">총수입금액</h6>
+        <h3 class="text-3xl font-extrabold text-emerald-500 tracking-tight" id="totalIncomeDisplay">₩ 0</h3>
+    </div>
+    <div class="bg-white p-6 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-rose-100 flex flex-col justify-center hover-lift">
+        <h6 class="text-rose-600/70 text-sm font-bold uppercase tracking-wider mb-2">총지출금액</h6>
+        <h3 class="text-3xl font-extrabold text-rose-500 tracking-tight" id="totalExpenseDisplay">₩ 0</h3>
+    </div>
+</div>
 <div class="bg-white p-8 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 mb-10">
     <h2 class="text-xl font-extrabold text-slate-800 mb-6 flex items-center gap-3">
         <div class="w-2 h-6 bg-blue-500 rounded-full"></div> 
@@ -374,6 +383,37 @@ document.addEventListener('DOMContentLoaded', function () {
         chartCanvas.style.display = 'none';
         noDataMsg.style.display = 'flex';
     }
+// ===================================================================== 
+// [추가된 영역] 3. 실시간으로 계산되도록 수정
+function updateTotalsRealTime() {
+    let totalIncome = 0;
+    let totalExpense = 0;
+
+    // 수입 내역 합산: 수입 테이블의 금액 셀은 'text-emerald-500' 클래스를 가짐
+    const incomeCells = document.querySelectorAll('td.text-emerald-500');
+    incomeCells.forEach(cell => {
+        const amountText = cell.innerText.replace(/[^0-9]/g, '');
+        totalIncome += parseInt(amountText) || 0;
+    });
+
+    // 지출 내역 합산: 지출 테이블의 금액 셀은 'text-slate-800 text-lg' 클래스를 가짐
+    const expenseCells = document.querySelectorAll('td.text-right.text-slate-800.text-lg');
+    expenseCells.forEach(cell => {
+        const amountText = cell.innerText.replace(/[^0-9]/g, '');
+        totalExpense += parseInt(amountText) || 0;
+    });
+
+    // 화면에 업데이트 (천 단위 콤마 포함)
+    const incomeDisplay = document.getElementById('totalIncomeDisplay');
+    const expenseDisplay = document.getElementById('totalExpenseDisplay');
+    
+    if (incomeDisplay) incomeDisplay.innerText = '₩ ' + totalIncome.toLocaleString('ko-KR');
+    if (expenseDisplay) expenseDisplay.innerText = '₩ ' + totalExpense.toLocaleString('ko-KR');
+}
+
+// 페이지 로드 시 즉시 테이블 데이터를 읽어 합계 계산
+updateTotalsRealTime();
+// =====================================================================
 });
 </script>
 {% endblock %}

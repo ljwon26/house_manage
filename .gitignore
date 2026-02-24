@@ -2,3 +2,4 @@ data/sql_app.db
 localhost.key
 localhost.crt
 Caddyfile
+docker-compose.yml

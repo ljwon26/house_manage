@@ -2,8 +2,10 @@ from fastapi import APIRouter, Depends, Form, Request, HTTPException, status
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
+from sqlalchemy import case
 from datetime import date
 from typing import Optional
+
 import json
 
 # 데이터베이스 및 모델을 정확한 경로에서 가져옵니다.
@@ -22,17 +24,35 @@ def get_expenses_page(request: Request, db: Session = Depends(get_db)):
     월급 및 지출 내역을 보여주는 메인 페이지를 렌더링합니다.
     """
     incomes = db.query(Income).order_by(Income.id.desc()).all()
-    expenses = db.query(Expense).order_by(Expense.id.desc()).all()
+    
+    # ▼▼▼ [수정] 다중 정렬 조건 적용 (case 문 활용) ▼▼▼
+    # 1. '고정적' -> '변동적' 순서 지정
+    type_order = case(
+        (Expense.expense_type == '고정적', 1),
+        (Expense.expense_type == '변동적', 2),
+        else_=3
+    )
+
+    # 2. '저축' -> '주거/통신' -> '용돈' 순서 지정
+    category_order = case(
+        (Expense.category == '저축', 1),
+        (Expense.category == '주거/통신', 2),
+        (Expense.category == '용돈', 3),
+        else_=4
+    )
+
+    # 정렬 적용 (조건 1 -> 조건 2 -> 같은 조건일 경우 최신순)
+    expenses = db.query(Expense).order_by(type_order, category_order, Expense.id.desc()).all()
+    # ▲▲▲ 여기까지 ▲▲▲
     
     total_income = sum(income.amount for income in incomes)
     total_expense = sum(expense.amount for expense in expenses)
     balance = total_income - total_expense
 
-    # ▼▼▼ [수정] 모든 지출의 카테고리별 합계 계산 ▼▼▼
+    # 모든 지출의 카테고리별 합계 계산
     expense_category_totals = {}
     for expense in expenses:
         expense_category_totals[expense.category] = expense_category_totals.get(expense.category, 0) + expense.amount
-    # ▲▲▲ 여기까지 ▲▲▲
     
     return templates.TemplateResponse("expenses.html", {
         "request": request,
@@ -41,10 +61,7 @@ def get_expenses_page(request: Request, db: Session = Depends(get_db)):
         "total_income": total_income,
         "total_expense": total_expense,
         "balance": balance,
-        # ▼▼▼ [수정] 템플릿에 총 수입과 지출 차트 데이터 전달 ▼▼▼
-        "total_income": total_income,
         "expense_category_totals": expense_category_totals
-        # ▲▲▲ 여기까지 ▲▲▲
     })
 
 @router.post("/add_income", response_class=RedirectResponse)
