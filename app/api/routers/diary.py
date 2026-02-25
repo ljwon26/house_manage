@@ -110,10 +110,26 @@ async def delete_diary(
     db: Session = Depends(get_db)
 ):
     """
-    일기 삭제 (자바스크립트 fetch API와 연동)
+    일기 삭제 및 로컬 서버에 저장된 첨부파일(이미지) 물리적 삭제
     """
     diary = db.query(Diary).filter(Diary.id == diary_id).first()
+    
     if diary:
+        # 1. 연결된 로컬 이미지 파일이 있는지 확인하고 물리적 삭제 진행
+        if diary.image_url:
+            # DB에 저장된 image_url 예시: "/static/diary/2026-02-25_143022_photo.jpg"
+            # 실제 파이썬이 인식해야 할 로컬 파일 경로로 변환 (맨 앞의 '/' 제거)
+            file_path = diary.image_url.lstrip('/')
+            
+            # 해당 경로에 파일이 실제로 존재하는지 체크 후 삭제
+            if os.path.exists(file_path):
+                try:
+                    os.remove(file_path)
+                    print(f"첨부파일 삭제 완료: {file_path}")
+                except Exception as e:
+                    print(f"파일 삭제 중 오류 발생: {e}")
+
+        # 2. DB에서 일기 데이터 최종 삭제
         db.delete(diary)
         db.commit()
         return JSONResponse(content={"status": "success"})

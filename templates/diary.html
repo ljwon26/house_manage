@@ -94,7 +94,7 @@
   <div class="inner-content">
     <header class="diary-header">
       <div class="title-group">
-        <h1>👶 우리가족 육아일기</h1>
+        <h1>👶 딸기를 위한 육아일기</h1>
         <p>아이와 함께한 소중한 기록을 서버에 안전하게 보관하세요.</p>
       </div>
     </header>
@@ -408,7 +408,6 @@
       try {
         const response = await fetch('/diary/delete', { method: 'POST', body: formData });
         if (response.ok) {
-          alert('삭제되었습니다.');
           location.reload();
         }
       } catch (error) {
