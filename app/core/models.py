@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Date, REAL, Float
+from sqlalchemy import Column, Integer, String, Date, REAL, Float, Text
 from .database import Base
 from pydantic import BaseModel
 from datetime import date 
@@ -84,3 +84,17 @@ class Insurance(Base):
     company = Column(String)             # 보험사
     memo = Column(String, nullable=True) # 보장내역(메모)
     file_path = Column(String, nullable=True) # 보험 증서 파일 경로
+    
+
+
+class Diary(Base):
+    __tablename__ = "diaries"
+
+    id = Column(Integer, primary_key=True, index=True)
+    diary_date = Column(Date, index=True)
+    title = Column(String)
+    content = Column(Text)  # <--- 이제 에러가 나지 않습니다.
+    video_url = Column(String, nullable=True)
+    video_id = Column(String, nullable=True)
+    created_at = Column(Date, default=date.today)
+    image_url = Column(String(255), nullable=True)

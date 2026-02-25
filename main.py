@@ -15,10 +15,9 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from starlette.middleware.sessions import SessionMiddleware
 from app.core.database import SessionLocal, Base, engine, get_db
 from app.core.models import Income, Expense, Task
-from app.api.routers import auth, expenses, tasks, dashboard, monthly_ledger 
 from app.api import assets
 from app.api.routers.tasks import send_email
-from app.api.routers import auth, expenses, tasks, dashboard, monthly_ledger, insurance # insurance
+from app.api.routers import auth, expenses, tasks, dashboard, monthly_ledger, insurance, diary
 from app.core import models 
 from app.core.database import engine, Base
 
@@ -54,6 +53,7 @@ app.include_router(tasks.router, tags=["Tasks"])
 app.include_router(dashboard.router, tags=["Dashboard"])
 app.include_router(monthly_ledger.router, tags=["MonthlyLedger"])
 app.include_router(insurance.router, tags=["Insurance"])
+app.include_router(diary.router)
 
 # --- 메인 페이지 라우트 ---
 @app.get("/", response_class=HTMLResponse)
@@ -86,6 +86,6 @@ async def send_due_date_reminders():
 # --- 애플리케이션 시작 시 실행될 이벤트 ---
 @app.on_event("startup")
 def startup_event():
-    
+    os.makedirs("static/diary", exist_ok=True)
     # 스케줄러에 마감일 알림 작업 등록
     scheduler.add_job(send_due_date_reminders, 'cron', hour=9, minute=10)
