@@ -88,6 +88,41 @@
   .lightbox-img { max-width: 90%; max-height: 90vh; border-radius: 12px; transform: scale(0.9); transition: 0.3s; cursor: default; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.5); }
   .lightbox-overlay.active .lightbox-img { transform: scale(1); }
   .lightbox-close { position: absolute; top: 30px; right: 40px; color: white; font-size: 40px; cursor: pointer; font-weight: 300; }
+
+  /* ====================================================
+     모바일 반응형 (화면 너비가 768px 이하일 때 적용)
+     ==================================================== */
+  @media (max-width: 768px) {
+    /* 1. 좌우 배치를 위아래 배치로 변경 */
+    .content-wrapper { 
+      flex-direction: column; 
+    }
+    
+    /* 2. 왼쪽 사이드바(달력+폼) 너비를 100%로 풀고, 고정(sticky) 해제 */
+    .left-sidebar { 
+      width: 100%; 
+      position: static; 
+    }
+    
+    /* 3. 오른쪽 일기 피드 너비를 100%로 맞추고, 높이 제한 해제 (자연스러운 스크롤) */
+    .right-content { 
+      width: 100%; 
+      max-height: none; 
+      overflow-y: visible; 
+      padding-right: 0; 
+    }
+
+    /* 4. 모바일 화면에 맞춰 카드 안쪽 여백 살짝 줄이기 */
+    .card-style, .diary-entry-card { 
+      padding: 16px; 
+    }
+    
+    /* 5. 팝업(모달)창 모바일 사이즈 맞춤 */
+    .modal-content {
+      width: 90%;
+      padding: 24px;
+    }
+  }
 </style>
 
 <div class="page-container">
