@@ -11,3 +11,4 @@ python-jose[cryptography]
 itsdangerous
 pytz
 openpyxl
+Pillow
