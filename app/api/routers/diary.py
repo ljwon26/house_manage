@@ -49,70 +49,58 @@ async def save_diary(
     date: date = Form(...),
     text: str = Form(...),
     youtube: Optional[str] = Form(""),
+    delete_image: Optional[str] = Form("false"), # [추가됨] 사진 삭제 여부 플래그
     file: Optional[UploadFile] = File(None),
     db: Session = Depends(get_db)
 ):
     image_url = None
     
-    # 1. 파일 업로드 및 압축 로직 (Pillow 사용)
+    # 1. 파일 업로드 및 압축 로직 (기존과 동일)
     if file and file.filename:
         os.makedirs(UPLOAD_FOLDER, exist_ok=True)
         timestamp = datetime.now().strftime("%H%M%S")
-        
-        # 압축할 것이므로 확장자를 .jpg로 고정
         safe_filename = f"{date}_{timestamp}_compressed.jpg"
         file_path = os.path.join(UPLOAD_FOLDER, safe_filename)
         
         content = await file.read()
-        
         try:
-            # 메모리에서 이미지 열기
             img = Image.open(io.BytesIO(content))
-            
-            # 투명도가 있는 PNG 등이면 RGB로 변환 (JPEG 저장을 위해)
-            if img.mode != 'RGB':
-                img = img.convert('RGB')
-            
-            # 해상도를 최대 1200x1200 안으로 비율 유지하며 축소
+            if img.mode != 'RGB': img = img.convert('RGB')
             img.thumbnail((1200, 1200))
-            
-            # 품질 80으로 JPEG 압축 저장
             img.save(file_path, "JPEG", quality=80, optimize=True)
             image_url = f"/static/diary/{safe_filename}"
-            
         except Exception as e:
-            print(f"이미지 압축 에러: {e}")
-            # 에러 시 원본 그대로 저장하는 안전장치
-            with open(file_path, "wb") as buffer:
-                buffer.write(content)
+            with open(file_path, "wb") as buffer: buffer.write(content)
             image_url = f"/static/diary/{safe_filename}"
 
-    # 2. 기존 일기 존재 여부 확인 (Upsert 로직)
+    # 2. 기존 일기 존재 여부 확인 (수정 로직)
     existing_diary = db.query(Diary).filter(Diary.diary_date == date).first()
     
     if existing_diary:
-        # 수정(Update) 처리
         existing_diary.content = text
         existing_diary.video_url = youtube
         
+        # [추가됨] 프론트엔드에서 '기존 사진 삭제'를 체크했을 경우
+        if delete_image == "true" and existing_diary.image_url:
+            old_file_path = existing_diary.image_url.lstrip('/')
+            if os.path.exists(old_file_path):
+                try: os.remove(old_file_path)
+                except: pass
+            existing_diary.image_url = None # DB에서도 사진 경로 삭제
+
+        # 새 사진이 올라왔을 때 덮어쓰기
         if image_url:
-            # 새로 올라온 사진이 있다면, 기존 서버의 옛날 사진은 삭제하여 용량 확보
+            # (만약 위에서 delete_image 체크를 안 했더라도, 새 사진이 오면 기존 사진 삭제)
             if existing_diary.image_url:
                 old_file_path = existing_diary.image_url.lstrip('/')
                 if os.path.exists(old_file_path):
-                    try:
-                        os.remove(old_file_path)
-                    except:
-                        pass
+                    try: os.remove(old_file_path)
+                    except: pass
             existing_diary.image_url = image_url
+            
     else:
-        # 신규(Insert) 처리
-        new_diary = Diary(
-            diary_date=date,
-            content=text,
-            video_url=youtube,
-            image_url=image_url
-        )
+        # 신규 저장 로직 (기존과 동일)
+        new_diary = Diary(diary_date=date, content=text, video_url=youtube, image_url=image_url)
         db.add(new_diary)
         
     db.commit()
