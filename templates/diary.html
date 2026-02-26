@@ -234,9 +234,15 @@
 
   // 폼 초기화 UI 복구
   function resetFormUI() {
+    // 1. 버튼 모양 복구
     const btnSubmit = document.getElementById('btnSubmitDiary');
     btnSubmit.innerText = "추억 저장하기";
     btnSubmit.style.backgroundColor = "#3b82f6"; // 원래 파란색
+
+    // 2. [추가된 부분] 입력칸 비우기 (날짜는 그대로 둠)
+    document.getElementById('diaryText').value = '';
+    document.getElementById('diaryYoutube').value = '';
+    document.getElementById('diaryFile').value = '';
   }
 
   document.addEventListener('DOMContentLoaded', () => {
