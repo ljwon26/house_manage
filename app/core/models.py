@@ -2,6 +2,7 @@ from sqlalchemy import Column, Integer, String, Date, REAL, Float, Text
 from .database import Base
 from pydantic import BaseModel
 from datetime import date 
+import uuid
 
 class Expense(Base):
     __tablename__ = "expenses"
@@ -98,3 +99,12 @@ class Diary(Base):
     video_id = Column(String, nullable=True)
     created_at = Column(Date, default=date.today)
     image_url = Column(String(255), nullable=True)
+    
+class TrustedDevice(Base):
+    __tablename__ = "trusted_devices"
+
+    id = Column(Integer, primary_key=True, index=True) 
+    
+    device_name = Column(String(50), nullable=False)
+    token = Column(String(100), unique=True, index=True, nullable=False)
+    created_at = Column(Date, default=date.today)
