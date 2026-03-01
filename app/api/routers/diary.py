@@ -11,13 +11,15 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.core.models import Diary
+from fastapi import Depends
+from app.core.dependencies import login_required
 
 templates = Jinja2Templates(directory="templates")
 router = APIRouter()
 
 UPLOAD_FOLDER = "static/diary"
 
-@router.get("/diary", response_class=HTMLResponse)
+@router.get("/diary", response_class=HTMLResponse,dependencies=[Depends(login_required)] )
 def get_diary_page(request: Request, db: Session = Depends(get_db)):
     all_dates_query = db.query(Diary.diary_date).all()
     all_dates = [str(d[0]) for d in all_dates_query]

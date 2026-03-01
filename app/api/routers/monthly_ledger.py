@@ -11,6 +11,8 @@ from dateutil.relativedelta import relativedelta
 import openpyxl
 from io import BytesIO
 from urllib.parse import quote
+from fastapi import Depends
+from app.core.dependencies import login_required 
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
@@ -32,7 +34,7 @@ def adjust_date_for_weekend(target_date: date) -> date:
         return target_date
 
 
-@router.get("/monthly_ledger", response_class=HTMLResponse)
+@router.get("/monthly_ledger", response_class=HTMLResponse, dependencies=[Depends(login_required)])
 def get_monthly_ledger(request: Request, db: Session = Depends(get_db), month: str = None):
     try:
         base_date = datetime.strptime(month, "%Y-%m").date().replace(day=1) if month else date.today()
@@ -156,7 +158,7 @@ def download_excel(request: Request, db: Session = Depends(get_db), month: str =
         headers={"Content-Disposition": f"attachment; filename*=UTF-8''{encoded_filename}"}
     )  
 
-@router.post("/set_budget", response_class=RedirectResponse)
+@router.post("/set_budget", response_class=RedirectResponse, dependencies=[Depends(login_required)])
 async def set_budget(
     month: str = Form(...), # "YYYY-MM"
     amount: int = Form(...),
@@ -171,7 +173,7 @@ async def set_budget(
     db.commit()
     return RedirectResponse(url=f"/monthly_ledger?month={month}", status_code=303)
 
-@router.post("/add_ledger_expense", response_class=RedirectResponse)
+@router.post("/add_ledger_expense", response_class=RedirectResponse, dependencies=[Depends(login_required)])
 async def add_ledger_expense(
     expense_date: date = Form(...),
     category: str = Form(...),

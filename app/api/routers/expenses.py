@@ -5,12 +5,14 @@ from sqlalchemy.orm import Session
 from sqlalchemy import case
 from datetime import date
 from typing import Optional
+from fastapi import Depends
 
 import json
 
 # 데이터베이스 및 모델을 정확한 경로에서 가져옵니다.
 from app.core.database import get_db
 from app.core.models import Expense, Income
+from app.core.dependencies import login_required
 
 # Jinja2 템플릿 설정을 가져옵니다.
 templates = Jinja2Templates(directory="templates")
@@ -18,7 +20,7 @@ templates = Jinja2Templates(directory="templates")
 # 라우터 객체를 생성합니다.
 router = APIRouter()
 
-@router.get("/expenses", response_class=HTMLResponse)
+@router.get("/expenses", response_class=HTMLResponse, dependencies=[Depends(login_required)])
 def get_expenses_page(request: Request, db: Session = Depends(get_db)):
     """
     월급 및 지출 내역을 보여주는 메인 페이지를 렌더링합니다.
@@ -64,7 +66,7 @@ def get_expenses_page(request: Request, db: Session = Depends(get_db)):
         "expense_category_totals": expense_category_totals
     })
 
-@router.post("/add_income", response_class=RedirectResponse)
+@router.post("/add_income", response_class=RedirectResponse, dependencies=[Depends(login_required)])
 def add_income(
     income_type: str = Form(...),
     amount: int = Form(...),
@@ -82,7 +84,7 @@ def add_income(
     db.commit()
     return RedirectResponse(url="/expenses", status_code=status.HTTP_303_SEE_OTHER)
 
-@router.post("/add_expense", response_class=RedirectResponse)
+@router.post("/add_expense", response_class=RedirectResponse, dependencies=[Depends(login_required)])
 def add_expense(
     expense_type: str = Form(...),
     category: str = Form(...),
@@ -106,7 +108,7 @@ def add_expense(
     db.commit()
     return RedirectResponse(url="/expenses", status_code=status.HTTP_303_SEE_OTHER)
 
-@router.post("/delete_income", response_class=RedirectResponse)
+@router.post("/delete_income", response_class=RedirectResponse, dependencies=[Depends(login_required)])
 def delete_income(income_id: int = Form(...), db: Session = Depends(get_db)):
     """
     수입 항목을 삭제합니다.
@@ -119,7 +121,7 @@ def delete_income(income_id: int = Form(...), db: Session = Depends(get_db)):
     db.commit()
     return RedirectResponse(url="/expenses", status_code=status.HTTP_303_SEE_OTHER)
 
-@router.post("/delete_expense", response_class=RedirectResponse)
+@router.post("/delete_expense", response_class=RedirectResponse, dependencies=[Depends(login_required)])
 def delete_expense(expense_id: int = Form(...), db: Session = Depends(get_db)):
     """
     지출 항목을 삭제합니다.
@@ -132,7 +134,7 @@ def delete_expense(expense_id: int = Form(...), db: Session = Depends(get_db)):
     db.commit()
     return RedirectResponse(url="/expenses", status_code=status.HTTP_303_SEE_OTHER)
 
-@router.get("/edit_expense/{expense_id}", response_class=HTMLResponse)
+@router.get("/edit_expense/{expense_id}", response_class=HTMLResponse, dependencies=[Depends(login_required)])
 def edit_expense_form(request: Request, expense_id: int, db: Session = Depends(get_db)):
     """
     특정 지출 항목의 수정 폼을 렌더링합니다.
@@ -146,7 +148,7 @@ def edit_expense_form(request: Request, expense_id: int, db: Session = Depends(g
         "expense": expense
     })
 
-@router.post("/edit_expense/{expense_id}", response_class=RedirectResponse)
+@router.post("/edit_expense/{expense_id}", response_class=RedirectResponse, dependencies=[Depends(login_required)])
 def update_expense(
     expense_id: int,
     expense_date: date = Form(...),
@@ -174,7 +176,7 @@ def update_expense(
     db.commit()
     return RedirectResponse(url="/expenses", status_code=status.HTTP_303_SEE_OTHER)
 
-@router.get("/edit_income/{income_id}", response_class=HTMLResponse)
+@router.get("/edit_income/{income_id}", response_class=HTMLResponse, dependencies=[Depends(login_required)])
 def edit_income_form(request: Request, income_id: int, db: Session = Depends(get_db)):
     """
     특정 수입 항목의 수정 폼을 렌더링합니다.
@@ -188,7 +190,7 @@ def edit_income_form(request: Request, income_id: int, db: Session = Depends(get
         "income": income
     })
 
-@router.post("/edit_income/{income_id}", response_class=RedirectResponse)
+@router.post("/edit_income/{income_id}", response_class=RedirectResponse, dependencies=[Depends(login_required)])
 def update_income(
     income_id: int,
     income_date: date = Form(...),

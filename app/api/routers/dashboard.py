@@ -8,6 +8,7 @@ from app.core.models import Income, Expense, Assets, Task
 # get_db 의존성을 정확한 경로에서 가져와야 합니다.
 from app.core.database import get_db
 from app.core.dependencies import login_required
+from fastapi import Depends
 
 # Jinja2 템플릿 설정을 가져옵니다.
 templates = Jinja2Templates(directory="templates")

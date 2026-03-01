@@ -8,6 +8,8 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from app.core.database import get_db
 from app.core.models import Insurance, FamilyMember
+from fastapi import Depends
+from app.core.dependencies import login_required # login_required 추가
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
@@ -17,7 +19,7 @@ if not os.path.exists(UPLOAD_DIR):
     os.makedirs(UPLOAD_DIR)
 
 # --- [기존] 조회 페이지 ---
-@router.get("/insurance", response_class=HTMLResponse)
+@router.get("/insurance", response_class=HTMLResponse, dependencies=[Depends(login_required)])
 def get_insurance_page(request: Request, db: Session = Depends(get_db)):
     # 기본 가족 자동 생성 로직
     default_names = ["재원", "다슬", "딸기"]
@@ -42,7 +44,7 @@ def get_insurance_page(request: Request, db: Session = Depends(get_db)):
     })
 
 # --- [기존] 추가 로직 ---
-@router.post("/insurance/add", response_class=RedirectResponse)
+@router.post("/insurance/add", response_class=RedirectResponse, dependencies=[Depends(login_required)])
 async def add_insurance(
     member_name: str = Form(...),
     insurance_name: str = Form(...),
@@ -76,7 +78,7 @@ async def add_insurance(
     return RedirectResponse(url="/insurance", status_code=303)
 
 # --- [추가됨] 수정 로직 (Update) ---
-@router.post("/insurance/update", response_class=RedirectResponse)
+@router.post("/insurance/update", response_class=RedirectResponse, dependencies=[Depends(login_required)])
 async def update_insurance(
     insurance_id: int = Form(...),
     member_name: str = Form(...),
@@ -126,7 +128,7 @@ async def update_insurance(
     return RedirectResponse(url="/insurance", status_code=303)
 
 # --- [기존] 삭제 로직 ---
-@router.post("/insurance/delete", response_class=RedirectResponse)
+@router.post("/insurance/delete", response_class=RedirectResponse, dependencies=[Depends(login_required)])
 def delete_insurance(insurance_id: int = Form(...), db: Session = Depends(get_db)):
     ins = db.query(Insurance).filter(Insurance.id == insurance_id).first()
     if ins:

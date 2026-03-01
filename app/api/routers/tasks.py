@@ -5,12 +5,13 @@ from datetime import datetime, date
 from typing import Optional
 import aiosmtplib
 from email.mime.text import MIMEText
-
+from fastapi import Depends
 
 # 모델과 의존성을 정확한 경로에서 가져옵니다.
 from app.core.database import get_db
 from app.core.models import Task
 from fastapi.templating import Jinja2Templates
+from app.core.dependencies import login_required # login_required 추가
 
 
 router = APIRouter()
@@ -42,7 +43,7 @@ async def send_email(to_email: str, subject: str, body: str):
 # ===================================================================
 # '알림 등록' 폼 페이지를 보여주는 경로
 # ===================================================================
-@router.get("/add_task_form", response_class=HTMLResponse)
+@router.get("/add_task_form", response_class=HTMLResponse, dependencies=[Depends(login_required)])
 def show_add_task_form(request: Request):
     """
     add_task.html 템플릿을 렌더링하여 알림 등록 폼을 보여줍니다.
@@ -109,7 +110,7 @@ async def add_task(
 # ===================================================================
 # 대시보드에서 알림을 삭제하는 함수
 # ===================================================================
-@router.post("/delete_task_dashboard", response_class=RedirectResponse)
+@router.post("/delete_task_dashboard", response_class=RedirectResponse, dependencies=[Depends(login_required)])
 def delete_task_from_dashboard(
     task_id: int = Form(...),
     db: Session = Depends(get_db)
@@ -148,7 +149,7 @@ def edit_task_form(request: Request, task_id: int, db: Session = Depends(get_db)
     return templates.TemplateResponse("edit_task.html", {"request": request, "task": task})
 
 
-@router.post("/edit_task/{task_id}", response_class=RedirectResponse)
+@router.post("/edit_task/{task_id}", response_class=RedirectResponse, dependencies=[Depends(login_required)])
 def update_task(
     task_id: int,
     title: str = Form(...),

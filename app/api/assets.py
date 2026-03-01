@@ -8,15 +8,17 @@ from app.core.dependencies import login_required
 from app.core.models import Assets # DB 모델 import
 from .schemas import AssetCreate
 from fastapi.templating import Jinja2Templates
+from fastapi import Depends
+from app.core.dependencies import login_required # login_required 추가
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
 
-@router.get("/add_asset", response_class=HTMLResponse)
+@router.get("/add_asset", response_class=HTMLResponse, dependencies=[Depends(login_required)])
 def add_asset_form(request: Request, ):
     return templates.TemplateResponse("add_asset.html", {"request": request, "today": date.today().isoformat()})
 
-@router.post("/add_asset", response_class=RedirectResponse)
+@router.post("/add_asset", response_class=RedirectResponse, dependencies=[Depends(login_required)])
 def create_asset(
     date: date = Form(...),
     category: str = Form(...),
@@ -51,7 +53,7 @@ def edit_asset_form(request: Request, asset_id: int, db: Session = Depends(get_d
         "today": date.today().isoformat()
     })
 
-@router.post("/edit_asset/{asset_id}", response_class=RedirectResponse)
+@router.post("/edit_asset/{asset_id}", response_class=RedirectResponse, dependencies=[Depends(login_required)])
 def update_asset(
     asset_id: int,
     date: date = Form(...),
@@ -74,7 +76,7 @@ def update_asset(
     return RedirectResponse(url="/dashboard", status_code=303)
 
 
-@router.post("/delete_asset", response_class=RedirectResponse)
+@router.post("/delete_asset", response_class=RedirectResponse, dependencies=[Depends(login_required)])
 def delete_asset(asset_id: int = Form(...), db: Session = Depends(get_db), ):
     asset = db.query(Assets).filter(Assets.id == asset_id).first()
     if asset:
