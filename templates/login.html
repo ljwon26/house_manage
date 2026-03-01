@@ -220,6 +220,38 @@
     .auth-card { padding: 2.5rem 1.5rem; }
     .login-wrapper { padding: 1rem; }
   }
+  /* 모바일 최적화 스타일 강화 */
+  @media (max-width: 640px) {
+    .login-wrapper {
+      padding: 1.5rem; /* 여백 축소 */
+    }
+    
+    .auth-card {
+      padding: 2.5rem 1.5rem; /* 카드 내부 여백 조정 */
+      border-radius: 12px;
+      box-shadow: none; /* 모바일에서는 그림자보다 깔끔한 선 강조 */
+      border: 1px solid #e2e8f0;
+    }
+
+    .brand-logo-text {
+      font-size: 28px; /* 로고 크기 조절 */
+    }
+
+    .auth-title {
+      font-size: 1.25rem;
+    }
+
+    /* 모바일에서 버튼 클릭이 쉽도록 높이 유지 */
+    .btn-primary, .btn-secondary {
+      padding: 1.1rem;
+      font-size: 1rem;
+    }
+    
+    /* 입력창 폰트 크기가 16px 미만이면 아이폰에서 자동 줌이 발생하므로 16px 권장 */
+    .form-group input {
+      font-size: 16px;
+      padding: 0.9rem;
+    }
 </style>
 
 <div class="login-wrapper">
