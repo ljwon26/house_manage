@@ -25,7 +25,10 @@ app = FastAPI()
 
 # --- 세션 미들웨어 추가 ---
 SECRET_KEY = os.getenv("SECRET_KEY", "a_very_secret_key_that_should_be_changed")
-app.add_middleware(SessionMiddleware, secret_key=SECRET_KEY, max_age=60 # 3600초(1시간) 동안 활동이 없으면 세션 만료
+app.add_middleware(
+    SessionMiddleware, 
+    secret_key=SECRET_KEY, 
+    max_age=3600# 3600초(1시간) 동안 활동이 없으면 세션 만료
 )
 
 # --- 로그인 비밀번호 설정 ---
