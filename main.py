@@ -20,6 +20,7 @@ from app.api.routers.tasks import send_email
 from app.api.routers import auth, expenses, tasks, dashboard, monthly_ledger, insurance, diary
 from app.core import models 
 from app.core.database import engine, Base
+from app.core.models import TrustedDevice
 
 app = FastAPI()
 
@@ -84,6 +85,29 @@ async def send_due_date_reminders():
             # ▼▼▼ [핵심] 이제 이 함수는 tasks.py의 send_email 함수를 정확히 호출합니다. ▼▼▼
             await send_email(to_email=task.email, subject=subject, body=body)
             
+    finally:
+        db.close()
+        
+# 1. 90일 지난 기기 삭제 함수 정의
+async def cleanup_old_trusted_devices():
+    """
+    등록된 지 90일이 지난 기기 데이터를 DB에서 삭제합니다.
+    """
+    db = SessionLocal()
+    try:
+        # 현재 날짜 기준 90일 전 날짜 계산
+        expiration_date = date.today() - timedelta(days=90)
+        
+        # 90일보다 오래된 데이터 조회 및 삭제
+        old_devices = db.query(TrustedDevice).filter(TrustedDevice.created_at <= expiration_date)
+        count = old_devices.count()
+        
+        if count > 0:
+            old_devices.delete(synchronize_session=false)
+            db.commit()
+            print(f"[보안] 3개월이 경과한 {count}개의 기기 인증이 만료되어 초기화되었습니다.")
+    except Exception as e:
+        print(f"기기 초기화 중 오류 발생: {e}")
     finally:
         db.close()
 
